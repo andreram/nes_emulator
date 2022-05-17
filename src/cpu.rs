@@ -1,8 +1,25 @@
 pub struct CPU {
   pub register_a: u8,
   pub register_x: u8,
+  pub register_y: u8,
   pub status: u8,
   pub program_counter: u16,
+  memory: [u8; 0xFFFF]
+}
+
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
+pub enum AddressingMode {
+  Immediate,
+  ZeroPage,
+  ZeroPage_X,
+  ZeroPage_Y,
+  Absolute,
+  Absolute_X,
+  Absolute_Y,
+  Indirect_X,
+  Indirect_Y,
+  NoneAddressing,
 }
 
 const F_ZERO: u8 = 0b0000_0010;
@@ -14,12 +31,107 @@ impl CPU {
     CPU {
       register_a: 0,
       register_x: 0,
+      register_y: 0,
       status: 0,
       program_counter: 0,
+      memory: [0; 0xFFFF]
     }
   }
 
-  // Helpers
+  fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
+    match mode {
+      AddressingMode::Immediate => self.program_counter,
+
+      AddressingMode::ZeroPage => self.mem_read(self.program_counter) as u16,
+
+      AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
+
+      AddressingMode::ZeroPage_X => {
+        let pos = self.mem_read(self.program_counter);
+        pos.wrapping_add(self.register_x) as u16
+      }
+
+      AddressingMode::ZeroPage_Y => {
+        let pos = self.mem_read(self.program_counter);
+        pos.wrapping_add(self.register_y) as u16
+      }
+
+      AddressingMode::Absolute_X => {
+        let base = self.mem_read_u16(self.program_counter);
+        base.wrapping_add(self.register_x as u16)
+      }
+
+      AddressingMode::Absolute_Y => {
+        let base = self.mem_read_u16(self.program_counter);
+        base.wrapping_add(self.register_y as u16)
+      }
+
+      AddressingMode::Indirect_X => {
+        let base = self.mem_read(self.program_counter);
+
+        let ptr: u8 = (base as u8).wrapping_add(self.register_x);
+        let lo = self.mem_read(ptr as u16);
+        let hi = self.mem_read(ptr.wrapping_add(1) as u16);
+        u16::from_le_bytes([lo, hi])
+      }
+
+      AddressingMode::Indirect_Y => {
+        let base = self.mem_read(self.program_counter);
+
+        let lo = self.mem_read(base as u16);
+        let hi = self.mem_read(base.wrapping_add(1) as u16);
+        let deref_base = u16::from_le_bytes([lo, hi]);
+        deref_base.wrapping_add(self.register_y as u16)
+      }
+
+      AddressingMode::NoneAddressing => {
+        panic!("mode {:?} is not supported", mode);
+      }
+    }
+  }
+
+  // Memory helpers
+
+  fn mem_read(&self, addr: u16) -> u8 {
+    self.memory[addr as usize]
+  }
+
+  fn mem_write(&mut self, addr: u16, data: u8) {
+    self.memory[addr as usize] = data;
+  }
+
+  fn mem_read_u16(&self, pos: u16) -> u16 {
+    u16::from_le_bytes([self.mem_read(pos), self.mem_read(pos + 1)])
+  }
+
+  fn mem_write_u16(&mut self, pos: u16, data: u16) {
+    let bytes = data.to_le_bytes();
+    self.mem_write(pos, bytes[0]);
+    self.mem_write(pos + 1, bytes[1]);
+  }
+
+  // Load functions
+
+  pub fn reset(&mut self) {
+    self.register_a = 0;
+    self.register_x = 0;
+    self.status = 0;
+
+    self.program_counter = self.mem_read_u16(0xFFFC);
+  }
+
+  pub fn load_and_run(&mut self, program: Vec<u8>) {
+    self.load(program);
+    self.reset();
+    self.run()
+  }
+
+  pub fn load(&mut self, program: Vec<u8>) {
+    self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
+    self.mem_write_u16(0xFFFC, 0x8000);
+  }
+
+  // Flag helpers
 
   fn update_zero_flag(&mut self, result: u8) {
     if result == 0 {
@@ -58,12 +170,10 @@ impl CPU {
   }
 
 
-  pub fn interpret(&mut self, program: Vec<u8>) {
-    self.program_counter = 0;
-
+  pub fn run(&mut self) {
     loop {
       // Fetch next instruction
-      let opcode = program[self.program_counter as usize];
+      let opcode = self.mem_read(self.program_counter);
       self.program_counter += 1;
 
       match opcode {
@@ -71,7 +181,7 @@ impl CPU {
         // LDA immediate
         0xA9 => {
           // Load the instruction's parameter into the accumulator
-          let param = program[self.program_counter as usize];
+          let param = self.mem_read(self.program_counter);
           self.program_counter += 1;
 
           self.lda(param);
@@ -96,7 +206,7 @@ mod test {
   #[test]
   fn test_0xa9_lda_immediate_load_data() {
     let mut cpu = CPU::new();
-    cpu.interpret(vec![0xa9, 0x05, 0x00]);
+    cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
     assert_eq!(cpu.register_a, 0x05);
     assert!(cpu.status & F_ZERO == 0);
     assert!(cpu.status & F_NEG == 0);
@@ -105,14 +215,14 @@ mod test {
   #[test]
   fn test_0xa9_lda_zero_flag() {
     let mut cpu = CPU::new();
-    cpu.interpret(vec![0xa9, 0x00, 0x00]);
+    cpu.load_and_run(vec![0xa9, 0x00, 0x00]);
     assert!(cpu.status & F_ZERO != 0);
   }
 
   #[test]
   fn test_0xa9_lda_negative_flag() {
     let mut cpu = CPU::new();
-    cpu.interpret(vec![0xa9, 0xff, 0x00]);
+    cpu.load_and_run(vec![0xa9, 0xff, 0x00]);
     assert!(cpu.status & F_NEG != 0);
   }
 
@@ -120,7 +230,7 @@ mod test {
   fn test_0xaa_tax() {
     let mut cpu = CPU::new();
     cpu.register_a = 10;
-    cpu.interpret(vec![0xaa, 0x00]);
+    cpu.load_and_run(vec![0xaa, 0x00]);
     assert_eq!(cpu.register_x, 10);
     assert!(cpu.status & F_ZERO == 0);
     assert!(cpu.status & F_NEG == 0);
@@ -130,7 +240,7 @@ mod test {
   fn test_0xaa_tax_zero_flag() {
     let mut cpu = CPU::new();
     cpu.register_a = 0;
-    cpu.interpret(vec![0xaa, 0x00]);
+    cpu.load_and_run(vec![0xaa, 0x00]);
     assert!(cpu.status & F_ZERO != 0);
   }
 
@@ -138,14 +248,14 @@ mod test {
   fn test_0xaa_tax_negative_flag() {
     let mut cpu = CPU::new();
     cpu.register_a = 0xff;
-    cpu.interpret(vec![0xaa, 0x00]);
+    cpu.load_and_run(vec![0xaa, 0x00]);
     assert!(cpu.status & F_NEG != 0);
   }
 
   #[test]
   fn test_5_ops_working_together() {
       let mut cpu = CPU::new();
-      cpu.interpret(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+      cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
 
       assert_eq!(cpu.register_x, 0xc1)
   }
@@ -154,7 +264,7 @@ mod test {
    fn test_inx_overflow() {
        let mut cpu = CPU::new();
        cpu.register_x = 0xff;
-       cpu.interpret(vec![0xe8, 0xe8, 0x00]);
+       cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
 
        assert_eq!(cpu.register_x, 1)
    }
