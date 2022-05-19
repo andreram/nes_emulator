@@ -286,4 +286,15 @@ mod test {
 
        assert_eq!(cpu.register_a, 0x55);
    }
+
+   #[test]
+   fn test_sta() {
+       let mut cpu = CPU::new();
+       cpu.mem_write(0x10, 0x55);
+
+       cpu.load_and_run(vec![0xa5, 0x10, 0x85, 0x20, 0x00]);
+
+       let value = cpu.mem_read(0x20 as u16);
+       assert_eq!(value, 0x55);
+   }
 }
