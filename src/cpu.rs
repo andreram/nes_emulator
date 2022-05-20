@@ -26,6 +26,10 @@ pub enum AddressingMode {
 
 const F_ZERO: u8 = 0b0000_0010;
 const F_NEG: u8 = 0b1000_0000;
+const F_CARRY: u8 = 0b0000_0001;
+const F_DEC: u8 = 0b0000_1000;
+const F_INT: u8 = 0b0000_0100;
+const F_OVRFLW: u8 = 0b0100_0000;
 
 impl CPU {
 
@@ -92,6 +96,11 @@ impl CPU {
     }
   }
 
+  fn set_register_a(&mut self, value: u8) {
+    self.register_a = value;
+    self.update_zero_and_negative_flags(self.register_a);
+  }
+
   // Memory helpers
 
   fn mem_read(&self, addr: u16) -> u8 {
@@ -151,7 +160,112 @@ impl CPU {
     }
   }
 
+  fn update_zero_and_negative_flags(&mut self, result: u8) {
+    self.update_zero_flag(result);
+    self.update_negative_flag(result);
+  } 
+
+  fn update_carry_flag(&mut self, set_flag: bool) {
+    if set_flag {
+      self.status = self.status | F_CARRY;
+    } else {
+      self.status = self.status & !F_CARRY;
+    }
+  }
+
   // Op functions
+
+  // Arithmetic and logic instructions
+  fn and(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.set_register_a(self.register_a & value);
+  }
+
+  fn or(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.set_register_a(self.register_a | value);
+  }
+
+  fn asl_accumulator(&mut self) {
+    let value = self.register_a;
+
+    self.set_register_a(value << 1);
+    self.update_carry_flag(value >> 7 == 1);
+  }
+
+  fn asl_helper(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    let result = value << 1;
+    self.mem_write(addr, result);
+    self.update_zero_and_negative_flags(result);
+    self.update_carry_flag(value >> 7 == 1);
+  }
+
+  fn asl(&mut self, mode: &AddressingMode) {
+    match mode {
+      AddressingMode::NoneAddressing => self.asl_accumulator(),
+      _ => self.asl_helper(mode)
+    }
+  }
+
+  fn lsr_accumulator(&mut self) {
+    let value = self.register_a;
+
+    self.set_register_a(value >> 1);
+    self.update_carry_flag(value & 1 == 1);
+  }
+
+  fn lsr_helper(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    let result = value >> 1;
+    self.mem_write(addr, result);
+    self.update_zero_and_negative_flags(result);
+    self.update_carry_flag(value & 1 == 1);
+  }
+
+  fn lsr(&mut self, mode: &AddressingMode) {
+    match mode {
+      AddressingMode::NoneAddressing => self.lsr_accumulator(),
+      _ => self.lsr_helper(mode)
+    }
+  }
+
+  // Status instructions
+  fn clc(&mut self) {
+    self.status = self.status & !F_CARRY;
+  }
+
+  fn cld(&mut self) {
+    self.status = self.status & !F_DEC;
+  }
+
+  fn cli(&mut self) {
+    self.status = self.status & !F_INT;
+  }
+
+  fn clv(&mut self) {
+    self.status = self.status & !F_OVRFLW;
+  }
+
+  fn sec(&mut self) {
+    self.status = self.status | F_CARRY;
+  }
+
+  fn sed(&mut self) {
+    self.status = self.status | F_DEC;
+  }
+
+  fn sei(&mut self) {
+    self.status = self.status | F_INT;
+  }
 
   fn lda(&mut self, mode: &AddressingMode) {
     let addr = self.get_operand_address(mode);
