@@ -190,6 +190,13 @@ impl CPU {
     self.set_register_a(self.register_a | value);
   }
 
+  fn eor(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.set_register_a(self.register_a ^ value);
+  }
+
   fn asl_accumulator(&mut self) {
     let value = self.register_a;
 
@@ -238,6 +245,35 @@ impl CPU {
     }
   }
 
+  fn compare(&mut self, mode: &AddressingMode, reg: u8) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.update_zero_and_negative_flags(reg.wrapping_sub(value));
+    self.update_carry_flag(reg >= value);
+  }
+
+  fn dec(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    let result = value.wrapping_sub(1);
+    self.mem_write(addr, result);
+    self.update_zero_and_negative_flags(result);
+  }
+
+  fn dex(&mut self) {
+    self.register_x = self.register_x.wrapping_sub(1);
+    self.update_zero_and_negative_flags(self.register_x);
+  }
+
+  fn dey(&mut self) {
+    self.register_y = self.register_y.wrapping_sub(1);
+    self.update_zero_and_negative_flags(self.register_y);
+  }
+
+
+
   // Status instructions
   fn clc(&mut self) {
     self.status = self.status & !F_CARRY;
@@ -272,8 +308,23 @@ impl CPU {
     let value = self.mem_read(addr);
 
     self.register_a = value;
-    self.update_zero_flag(self.register_a);
-    self.update_negative_flag(self.register_a);
+    self.update_zero_and_negative_flags(self.register_a);
+  }
+
+  fn ldx(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.register_x = value;
+    self.update_zero_and_negative_flags(self.register_x);
+  }
+
+  fn ldy(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.register_y = value;
+    self.update_zero_and_negative_flags(self.register_y);
   }
 
   fn sta(&mut self, mode: &AddressingMode) {
@@ -281,18 +332,106 @@ impl CPU {
     self.mem_write(addr, self.register_a);
   }
 
+  fn stx(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    self.mem_write(addr, self.register_x);
+  }
+
+  fn sty(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    self.mem_write(addr, self.register_y);
+  }
+
   fn tax(&mut self) {
     self.register_x = self.register_a;
-    self.update_zero_flag(self.register_x);
-    self.update_negative_flag(self.register_x);
+    self.update_zero_and_negative_flags(self.register_x);
+  }
+
+  fn tay(&mut self) {
+    self.register_y = self.register_a;
+    self.update_zero_and_negative_flags(self.register_y);
+  }
+
+  fn txa(&mut self) {
+    self.set_register_a(self.register_x);
+  }
+
+  fn tya(&mut self) {
+    self.set_register_a(self.register_y);
+  }
+
+  fn inc(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    let result = value.wrapping_add(1);
+    self.mem_write(addr, result);
+    self.update_zero_and_negative_flags(result);
   }
 
   fn inx(&mut self) {
     self.register_x = self.register_x.wrapping_add(1);
-    self.update_zero_flag(self.register_x);
-    self.update_negative_flag(self.register_x);
+    self.update_zero_and_negative_flags(self.register_x);
   }
 
+  fn iny(&mut self) {
+    self.register_y = self.register_y.wrapping_add(1);
+    self.update_zero_and_negative_flags(self.register_y);
+  }
+
+  fn rol_accumulator(&mut self) {
+    let carry = self.register_a >> 7;
+    let old_carry = self.status & F_CARRY != 0;
+    self.set_register_a((self.register_a << 1) | old_carry as u8);
+    self.update_carry_flag(carry == 1);
+  }
+
+  fn rol_helper(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    let carry = value >> 7;
+    let old_carry = self.status & F_CARRY != 0;
+    let result = (value << 1) | old_carry as u8;
+
+    self.mem_write(addr, result);
+    self.update_zero_and_negative_flags(result);
+    self.update_carry_flag(carry == 1);
+  }
+
+  fn rol(&mut self, mode: &AddressingMode) {
+    match mode {
+      AddressingMode::NoneAddressing => self.rol_accumulator(),
+      _ => self.rol_helper(mode)
+    }
+  }
+
+  fn ror_accumulator(&mut self) {
+    let carry = self.register_a & 1;
+    let old_carry = self.status & F_CARRY != 0;
+    self.set_register_a((self.register_a >> 1) | ((old_carry as u8) << 7));
+    self.update_carry_flag(carry == 1);
+  }
+
+  fn ror_helper(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    let carry = value & 1;
+    let old_carry = self.status & F_CARRY != 0;
+    let result = (value >> 1) | ((old_carry as u8) << 7);
+
+    self.mem_write(addr, result);
+    self.update_zero_and_negative_flags(result);
+    self.update_carry_flag(carry == 1);
+  }
+
+  fn ror(&mut self, mode: &AddressingMode) {
+    match mode {
+      AddressingMode::NoneAddressing => self.ror_accumulator(),
+      _ => self.ror_helper(mode)
+    }
+  }
 
   pub fn run(&mut self) {
     loop {
@@ -307,11 +446,69 @@ impl CPU {
         
         "LDA" => self.lda(&op.mode),
 
+        "LDX" => self.ldx(&op.mode),
+
+        "LDY" => self.ldy(&op.mode),
+
         "STA" => self.sta(&op.mode),
+
+        "STX" => self.stx(&op.mode),
+
+        "STY" => self.sty(&op.mode),
 
         "TAX" => self.tax(),
 
+        "TAY" => self.tay(),
+
+        "TXA" => self.txa(),
+
+        "TYA" => self.tya(),
+
+        "INC" => self.inc(&op.mode),
+
         "INX" => self.inx(),
+
+        "INY" => self.iny(),
+
+        "DEC" => self.dec(&op.mode),
+
+        "DEX" => self.dex(),
+
+        "DEY" => self.dey(),
+
+        "AND" => self.and(&op.mode),
+
+        "ORA" => self.or(&op.mode),
+
+        "EOR" => self.eor(&op.mode),
+
+        "CMP" => self.compare(&op.mode, self.register_a),
+
+        "CPX" => self.compare(&op.mode, self.register_x),
+
+        "CPY" => self.compare(&op.mode, self.register_y),
+
+        "ROL" => self.rol(&op.mode),
+
+        "ROR" => self.ror(&op.mode),
+
+        "ASL" => self.asl(&op.mode),
+
+        "LSR" => self.lsr(&op.mode),
+
+        "CLC" => self.clc(),
+
+        "CLD" => self.cld(),
+
+        "CLI" => self.cli(),
+
+        "CLV" => self.clv(),
+
+        "SEC" => self.sec(),
+
+        "SED" => self.sed(),
+
+        "SEI" => self.sei(),
 
         "BRK" => return,
 
