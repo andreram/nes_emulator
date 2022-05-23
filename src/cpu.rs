@@ -443,14 +443,6 @@ impl CPU {
     }
   }
 
-  fn bcs(&mut self) {
-    let offset = self.mem_read(self.program_counter);
-
-    if self.status & F_CARRY != 0 {
-      self.program_counter += offset as u16;
-    }
-  }
-
   pub fn run(&mut self) {
     loop {
       // Fetch next instruction
