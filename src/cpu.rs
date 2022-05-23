@@ -433,6 +433,24 @@ impl CPU {
     }
   }
 
+  // Branch control instructions
+  fn branch(&mut self, flag: u8, branch_on_set: bool) {
+    let offset = self.mem_read(self.program_counter);
+    let flag_set = self.status & flag != 0;
+
+    if flag_set == branch_on_set {
+      self.program_counter += offset as u16;
+    }
+  }
+
+  fn bcs(&mut self) {
+    let offset = self.mem_read(self.program_counter);
+
+    if self.status & F_CARRY != 0 {
+      self.program_counter += offset as u16;
+    }
+  }
+
   pub fn run(&mut self) {
     loop {
       // Fetch next instruction
@@ -509,6 +527,18 @@ impl CPU {
         "SED" => self.sed(),
 
         "SEI" => self.sei(),
+
+        "BCC" => self.branch(F_CARRY, false),
+
+        "BCS" => self.branch(F_CARRY, true),
+
+        "BEQ" => self.branch(F_ZERO, true),
+
+        "BNE" => self.branch(F_ZERO, false),
+
+        "BPL" => self.branch(F_NEG, false),
+
+        "BMI" => self.branch(F_NEG, true),
 
         "BRK" => return,
 
