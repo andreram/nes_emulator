@@ -203,9 +203,37 @@ impl CPU {
     }
   }
 
+  fn add_to_register_a(&mut self, value: u8) {
+    let carry_in = (self.status & F_CARRY != 0) as u8; 
+    let (sum, overflow) = self.register_a.overflowing_add(value);
+    let (result, overflow_with_carry) = sum.overflowing_add(carry_in);
+
+    self.update_flag(F_CARRY, overflow || overflow_with_carry);
+
+    // Checks if the sign bits of the operands are different from the result
+    // i.e. two positive numbers added to a negative number or vice versa
+    self.update_flag(F_OVRFLW, (value ^ result) & (self.register_a ^ result) & 0x80 != 0);
+    self.set_register_a(result);
+  }
+
   // Op functions
 
   // Arithmetic and logic instructions
+  fn adc(&mut self, mode: &AddressingMode) {
+    /* Ignoring decimal mode */
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.add_to_register_a(value);
+  }
+
+  fn sbc(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
+
+    self.add_to_register_a((!value).wrapping_add(1));
+  }
+
   fn and(&mut self, mode: &AddressingMode) {
     let addr = self.get_operand_address(mode);
     let value = self.mem_read(addr);
@@ -389,8 +417,17 @@ impl CPU {
     self.update_zero_and_negative_flags(self.register_y);
   }
 
+  fn tsx(&mut self) {
+    self.register_x = self.stack_pointer;
+    self.update_zero_and_negative_flags(self.register_x);
+  }
+
   fn txa(&mut self) {
     self.set_register_a(self.register_x);
+  }
+
+  fn txs(&mut self) {
+    self.stack_pointer = self.register_x;
   }
 
   fn tya(&mut self) {
@@ -491,8 +528,26 @@ impl CPU {
   }
 
   fn rti(&mut self) {
-    self.status = (self.stack_pop() & !F_BREAK) | (self.status & F_BREAK);
+    self.plp();
     self.program_counter = self.stack_pop_u16();
+  }
+
+  // Stack related instructions
+  fn pha(&mut self) {
+    self.stack_push(self.register_a);
+  }
+
+  fn php(&mut self) {
+    self.stack_push(self.status | F_BREAK);
+  }
+
+  fn pla(&mut self) {
+    let data = self.stack_pop();
+    self.set_register_a(data);
+  }
+
+  fn plp(&mut self) {
+    self.status = (self.stack_pop() & !F_BREAK) | (self.status & F_BREAK);
   }
 
   pub fn run(&mut self) {
@@ -522,7 +577,11 @@ impl CPU {
 
         "TAY" => self.tay(),
 
+        "TSX" => self.tsx(),
+
         "TXA" => self.txa(),
+
+        "TXS" => self.txs(),
 
         "TYA" => self.tya(),
 
@@ -537,6 +596,10 @@ impl CPU {
         "DEX" => self.dex(),
 
         "DEY" => self.dey(),
+
+        "ADC" => self.adc(&op.mode),
+
+        "SBC" => self.sbc(&op.mode),
 
         "AND" => self.and(&op.mode),
 
@@ -612,6 +675,14 @@ impl CPU {
         "BIT" => self.bit(&op.mode),
 
         "RTI" => self.rti(),
+
+        "PHA" => self.pha(),
+
+        "PHP" => self.php(),
+
+        "PLA" => self.pla(),
+
+        "PLP" => self.plp(),
 
         "NOP" => {},
 
