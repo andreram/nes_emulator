@@ -6,6 +6,7 @@ pub struct CPU {
   pub register_y: u8,
   pub status: u8,
   pub program_counter: u16,
+  pub stack_pointer: u8, 
   memory: [u8; 0xFFFF]
 }
 
@@ -30,6 +31,10 @@ const F_CARRY: u8 = 0b0000_0001;
 const F_DEC: u8 = 0b0000_1000;
 const F_INT: u8 = 0b0000_0100;
 const F_OVRFLW: u8 = 0b0100_0000;
+const F_BREAK: u8 = 0b0011_0000;
+
+const STACK_OFFSET: u16 = 0x100;
+const STACK_RESET: u8 = 0xfd;
 
 impl CPU {
 
@@ -40,6 +45,7 @@ impl CPU {
       register_y: 0,
       status: 0,
       program_counter: 0,
+      stack_pointer: STACK_RESET,
       memory: [0; 0xFFFF]
     }
   }
@@ -121,12 +127,36 @@ impl CPU {
     self.mem_write(pos + 1, bytes[1]);
   }
 
+  fn stack_push(&mut self, data: u8) {
+    self.mem_write(STACK_OFFSET + (self.stack_pointer as u16), data);
+    self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+  }
+
+  fn stack_pop(&mut self) -> u8 {
+    let data = self.mem_read(STACK_OFFSET + (self.stack_pointer as u16));
+    self.stack_pointer = self.stack_pointer.wrapping_add(1);
+    data
+  }
+
+  fn stack_push_u16(&mut self, data: u16) {
+    let bytes = data.to_le_bytes();
+    self.stack_push(bytes[1]);
+    self.stack_push(bytes[0]);
+  }
+
+  fn stack_pop_u16(&mut self) -> u16 {
+    let lo = self.stack_pop();
+    let hi = self.stack_pop();
+    u16::from_le_bytes([lo, hi])
+  }
+
+
   // Load functions
 
   pub fn reset(&mut self) {
     self.register_a = 0;
     self.register_x = 0;
-    self.status = 0;
+    self.status = (self.status & !F_INT) & !F_BREAK;
 
     self.program_counter = self.mem_read_u16(0xFFFC);
   }
@@ -165,11 +195,11 @@ impl CPU {
     self.update_negative_flag(result);
   } 
 
-  fn update_carry_flag(&mut self, set_flag: bool) {
+  fn update_flag(&mut self, flag: u8, set_flag: bool) {
     if set_flag {
-      self.status = self.status | F_CARRY;
+      self.status = self.status | flag;
     } else {
-      self.status = self.status & !F_CARRY;
+      self.status = self.status & !flag;
     }
   }
 
@@ -201,7 +231,7 @@ impl CPU {
     let value = self.register_a;
 
     self.set_register_a(value << 1);
-    self.update_carry_flag(value >> 7 == 1);
+    self.update_flag(F_CARRY, value >> 7 == 1);
   }
 
   fn asl_helper(&mut self, mode: &AddressingMode) {
@@ -211,7 +241,7 @@ impl CPU {
     let result = value << 1;
     self.mem_write(addr, result);
     self.update_zero_and_negative_flags(result);
-    self.update_carry_flag(value >> 7 == 1);
+    self.update_flag(F_CARRY, value >> 7 == 1);
   }
 
   fn asl(&mut self, mode: &AddressingMode) {
@@ -225,7 +255,7 @@ impl CPU {
     let value = self.register_a;
 
     self.set_register_a(value >> 1);
-    self.update_carry_flag(value & 1 == 1);
+    self.update_flag(F_CARRY, value & 1 == 1);
   }
 
   fn lsr_helper(&mut self, mode: &AddressingMode) {
@@ -235,7 +265,7 @@ impl CPU {
     let result = value >> 1;
     self.mem_write(addr, result);
     self.update_zero_and_negative_flags(result);
-    self.update_carry_flag(value & 1 == 1);
+    self.update_flag(F_CARRY, value & 1 == 1);
   }
 
   fn lsr(&mut self, mode: &AddressingMode) {
@@ -250,7 +280,7 @@ impl CPU {
     let value = self.mem_read(addr);
 
     self.update_zero_and_negative_flags(reg.wrapping_sub(value));
-    self.update_carry_flag(reg >= value);
+    self.update_flag(F_CARRY, reg >= value);
   }
 
   fn dec(&mut self, mode: &AddressingMode) {
@@ -272,7 +302,14 @@ impl CPU {
     self.update_zero_and_negative_flags(self.register_y);
   }
 
+  fn bit(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    let value = self.mem_read(addr);
 
+    self.update_flag(F_NEG, value & 0b1000_0000 != 0);
+    self.update_flag(F_OVRFLW, value & 0b0100_0000 != 0);
+    self.update_zero_flag(self.register_a & value);
+  }
 
   // Status instructions
   fn clc(&mut self) {
@@ -383,7 +420,7 @@ impl CPU {
     let carry = self.register_a >> 7;
     let old_carry = self.status & F_CARRY != 0;
     self.set_register_a((self.register_a << 1) | old_carry as u8);
-    self.update_carry_flag(carry == 1);
+    self.update_flag(F_CARRY, carry == 1);
   }
 
   fn rol_helper(&mut self, mode: &AddressingMode) {
@@ -396,7 +433,7 @@ impl CPU {
 
     self.mem_write(addr, result);
     self.update_zero_and_negative_flags(result);
-    self.update_carry_flag(carry == 1);
+    self.update_flag(F_CARRY, carry == 1);
   }
 
   fn rol(&mut self, mode: &AddressingMode) {
@@ -410,7 +447,7 @@ impl CPU {
     let carry = self.register_a & 1;
     let old_carry = self.status & F_CARRY != 0;
     self.set_register_a((self.register_a >> 1) | ((old_carry as u8) << 7));
-    self.update_carry_flag(carry == 1);
+    self.update_flag(F_CARRY, carry == 1);
   }
 
   fn ror_helper(&mut self, mode: &AddressingMode) {
@@ -423,7 +460,7 @@ impl CPU {
 
     self.mem_write(addr, result);
     self.update_zero_and_negative_flags(result);
-    self.update_carry_flag(carry == 1);
+    self.update_flag(F_CARRY, carry == 1);
   }
 
   fn ror(&mut self, mode: &AddressingMode) {
@@ -441,6 +478,21 @@ impl CPU {
     if flag_set == branch_on_set {
       self.program_counter += offset as u16;
     }
+  }
+
+  fn jsr(&mut self) {
+    /* Subtract one to undo the PC increment from the opcode */
+    self.stack_push_u16(self.program_counter + 2 - 1);
+    self.program_counter = self.mem_read_u16(self.program_counter);
+  }
+
+  fn rts(&mut self) {
+    self.program_counter = self.stack_pop_u16() + 1;
+  }
+
+  fn rti(&mut self) {
+    self.status = (self.stack_pop() & !F_BREAK) | (self.status & F_BREAK);
+    self.program_counter = self.stack_pop_u16();
   }
 
   pub fn run(&mut self) {
@@ -524,13 +576,44 @@ impl CPU {
 
         "BCS" => self.branch(F_CARRY, true),
 
-        "BEQ" => self.branch(F_ZERO, true),
-
         "BNE" => self.branch(F_ZERO, false),
+
+        "BEQ" => self.branch(F_ZERO, true),
 
         "BPL" => self.branch(F_NEG, false),
 
         "BMI" => self.branch(F_NEG, true),
+
+        "BVC" => self.branch(F_OVRFLW, false),
+
+        "BVS" => self.branch(F_OVRFLW, true),
+
+        "JMP" => {
+          match opcode {
+            /* Absolute */
+            0x4c => {
+              self.program_counter = self.mem_read_u16(self.program_counter);
+            },
+
+            /* Indirect */
+            0x6c => {
+              let addr = self.mem_read_u16(self.program_counter);
+              self.program_counter = self.mem_read_u16(addr);
+            },
+
+            _ => {},
+          }
+        },
+
+        "JSR" => self.jsr(),
+
+        "RTS" => self.rts(),
+
+        "BIT" => self.bit(&op.mode),
+
+        "RTI" => self.rti(),
+
+        "NOP" => {},
 
         "BRK" => return,
 
