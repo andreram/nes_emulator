@@ -133,9 +133,8 @@ impl CPU {
   }
 
   fn stack_pop(&mut self) -> u8 {
-    let data = self.mem_read(STACK_OFFSET + (self.stack_pointer as u16));
     self.stack_pointer = self.stack_pointer.wrapping_add(1);
-    data
+    self.mem_read(STACK_OFFSET + (self.stack_pointer as u16))
   }
 
   fn stack_push_u16(&mut self, data: u16) {
@@ -513,11 +512,13 @@ impl CPU {
 
   // Branch control instructions
   fn branch(&mut self, flag: u8, branch_on_set: bool) {
-    let offset = self.mem_read(self.program_counter);
+    let offset = self.mem_read(self.program_counter) as i8;
     let flag_set = self.status & flag != 0;
 
     if flag_set == branch_on_set {
-      self.program_counter += offset as u16;
+      self.program_counter = self.program_counter
+        .wrapping_add(1)
+        .wrapping_add(offset as u16);
     }
   }
 
@@ -562,6 +563,8 @@ impl CPU {
       let program_counter_state = self.program_counter;
 
       let op = OPS_MAP[&opcode];
+
+      println!("{}", op.ins);
 
       match op.ins {
         
@@ -692,7 +695,7 @@ impl CPU {
 
         "BRK" => return,
 
-        _ => todo!(),
+        _ => panic!("unknown opcode: {}", opcode),
       }
 
       if program_counter_state == self.program_counter {
@@ -749,7 +752,7 @@ mod test {
   fn test_0xaa_tax_negative_flag() {
     let mut cpu = CPU::new();
     cpu.load_and_run(vec![0xa9, 0xff, 0x00]);
-    assert!(cpu.status & F_NEG != 0);
+    assert_ne!(cpu.status & F_NEG, 0);
   }
 
   #[test]
@@ -763,9 +766,10 @@ mod test {
    #[test]
    fn test_inx_overflow() {
        let mut cpu = CPU::new();
-       cpu.load_and_run(vec![0xa9, 0xff, 0xaa, 0xe8, 0xe8, 0x00]);
+       cpu.load_and_run(vec![0xa9, 0xff, 0xaa, 0xe8, 0x00]);
 
-       assert_eq!(cpu.register_x, 1)
+       assert_eq!(cpu.register_x, 0);
+       assert_ne!(cpu.status & F_ZERO, 0);
    }
 
    #[test]
@@ -961,5 +965,113 @@ mod test {
        assert_eq!(cpu.register_a, 0xa0);
        assert_ne!(cpu.status & F_CARRY, 0);
        assert_eq!(cpu.status & F_OVRFLW, 0);
+   }
+
+   #[test]
+   fn test_asl_acc_1() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0x01, 0x0a, 0x00]);
+       assert_eq!(cpu.register_a, 0x02);
+       assert_eq!(cpu.status & F_CARRY, 0);
+       assert_eq!(cpu.status & F_NEG, 0);
+       assert_eq!(cpu.status & F_ZERO, 0);
+   }
+
+   #[test]
+   fn test_asl_acc_2() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0xf1, 0x0a, 0x00]);
+       assert_eq!(cpu.register_a, 0xe2);
+       assert_ne!(cpu.status & F_CARRY, 0);
+       assert_ne!(cpu.status & F_NEG, 0);
+   }
+
+   #[test]
+   fn test_asl_acc_3() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0x7f, 0x0a, 0x00]);
+       assert_eq!(cpu.register_a, 0xfe);
+       assert_eq!(cpu.status & F_CARRY, 0);
+       assert_ne!(cpu.status & F_NEG, 0);
+   }
+
+   #[test]
+   fn test_asl_acc_4() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0x80, 0x0a, 0x00]);
+       assert_eq!(cpu.register_a, 0);
+       assert_ne!(cpu.status & F_CARRY, 0);
+       assert_eq!(cpu.status & F_NEG, 0);
+       assert_ne!(cpu.status & F_ZERO, 0);
+   }
+
+   #[test]
+   fn test_lsr_acc_1() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0x01, 0x4a, 0x00]);
+       assert_eq!(cpu.register_a, 0);
+       assert_eq!(cpu.status & F_NEG, 0);
+       assert_ne!(cpu.status & F_CARRY, 0);
+       assert_ne!(cpu.status & F_ZERO, 0);
+   }
+
+   #[test]
+   fn test_lsr_acc_2() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0x81, 0x4a, 0x00]);
+       assert_eq!(cpu.register_a, 0x40);
+       assert_eq!(cpu.status & F_NEG, 0);
+       assert_ne!(cpu.status & F_CARRY, 0);
+       assert_eq!(cpu.status & F_ZERO, 0);
+   }
+
+   #[test]
+   fn test_lsr_acc_3() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0x82, 0x4a, 0x00]);
+       assert_eq!(cpu.register_a, 0x41);
+       assert_eq!(cpu.status & F_CARRY, 0);
+   }
+
+   #[test]
+   fn test_pha_pla() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0x11, 0x48, 0xa9, 0x22, 0x68, 0x00]);
+       assert_eq!(cpu.register_a, 0x11);
+   }
+
+   #[test]
+   fn test_pha_plp() {
+       let mut cpu = CPU::new();
+       cpu.load_and_run(vec![0xa9, 0xff, 0x48, 0x28, 0x00]);
+       assert_eq!(cpu.status & !F_BREAK, !F_BREAK);
+   }
+
+   #[test]
+   fn test_jsr_rts() {
+       let mut cpu = CPU::new();
+       /*
+          JSR init
+          JSR loop
+          JSR end
+
+        init:
+          LDX #$00
+          RTS
+
+        loop:
+          INX
+          CPX #$05
+          BNE loop
+          RTS
+
+        end:
+          BRK
+        */
+       cpu.load_and_run(vec![0x20, 0x09, 0x80, 0x20, 0x0c, 0x80, 0x20, 0x12, 0x80, 0xa2, 0x00, 0x60, 0xe8, 0xe0, 0x05, 0xd0, 0xfb, 0x60, 0x00]);
+       assert_eq!(cpu.register_x, 5);
+       assert_eq!(cpu.status & F_NEG, 0);
+       assert_ne!(cpu.status & F_ZERO, 0);
+       assert_ne!(cpu.status & F_CARRY, 0);
    }
 }
