@@ -571,12 +571,7 @@ impl CPU {
       self.program_counter += 1;
       let program_counter_state = self.program_counter;
 
-      let op = OPS_MAP.get(&opcode);
-
-      let op = match op {
-        Some(&op) => op,
-        None => panic!("test {}", opcode),
-      };
+      let op = OPS_MAP[&opcode];
 
       match op.ins {
         
@@ -1080,7 +1075,7 @@ mod test {
         end:
           BRK
         */
-       cpu.load_and_run(vec![0x20, 0x09, 0x80, 0x20, 0x0c, 0x80, 0x20, 0x12, 0x80, 0xa2, 0x00, 0x60, 0xe8, 0xe0, 0x05, 0xd0, 0xfb, 0x60, 0x00]);
+       cpu.load_and_run(vec![0x20, 0x09, 0x06, 0x20, 0x0c, 0x06, 0x20, 0x12, 0x06, 0xa2, 0x00, 0x60, 0xe8, 0xe0, 0x05, 0xd0, 0xfb, 0x60, 0x00]);
        assert_eq!(cpu.register_x, 5);
        assert_eq!(cpu.status & F_NEG, 0);
        assert_ne!(cpu.status & F_ZERO, 0);
