@@ -9,7 +9,7 @@ pub struct Op {
   pub mode: AddressingMode,
 }
 
-static OPS: [Op; 143] = [
+static OPS: [Op; 151] = [
   Op {code: 0x00, ins: "BRK", len: 1, cycles: 7, mode: AddressingMode::NoneAddressing},
 
   Op {code: 0x69, ins: "ADC", len: 2, cycles: 2, mode: AddressingMode::Immediate},
@@ -52,6 +52,15 @@ static OPS: [Op; 143] = [
   Op {code: 0xd8, ins: "CLD", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
   Op {code: 0x58, ins: "CLI", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
   Op {code: 0xb8, ins: "CLV", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+
+  Op {code: 0xc9, ins: "CMP", len: 2, cycles: 2, mode: AddressingMode::Immediate},
+  Op {code: 0xc5, ins: "CMP", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},
+  Op {code: 0xd5, ins: "CMP", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0xcd, ins: "CMP", len: 3, cycles: 4, mode: AddressingMode::Absolute},
+  Op {code: 0xdd, ins: "CMP", len: 3, cycles: 4, mode: AddressingMode::Absolute_X},
+  Op {code: 0xd9, ins: "CMP", len: 3, cycles: 4, mode: AddressingMode::Absolute_Y},
+  Op {code: 0xc1, ins: "CMP", len: 2, cycles: 6, mode: AddressingMode::Indirect_X},
+  Op {code: 0xd1, ins: "CMP", len: 2, cycles: 5, mode: AddressingMode::Indirect_Y},
 
   Op {code: 0xe0, ins: "CPX", len: 2, cycles: 2, mode: AddressingMode::Immediate},
   Op {code: 0xe4, ins: "CPX", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},
