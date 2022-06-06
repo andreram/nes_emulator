@@ -1,4 +1,5 @@
 use crate::ops::OPS_MAP;
+use crate::bus::Bus;
 
 pub struct CPU {
   pub register_a: u8,
@@ -7,7 +8,7 @@ pub struct CPU {
   pub status: u8,
   pub program_counter: u16,
   pub stack_pointer: u8, 
-  memory: [u8; 0xFFFF]
+  pub bus: Bus,
 }
 
 #[derive(Debug)]
@@ -36,6 +37,32 @@ const F_BREAK: u8 = 0b0011_0000;
 const STACK_OFFSET: u16 = 0x100;
 const STACK_RESET: u8 = 0xfd;
 
+pub trait Mem {
+  fn mem_read(&self, addr: u16) -> u8;
+
+  fn mem_write(&mut self, addr: u16, data: u8);
+
+  fn mem_read_u16(&self, pos: u16) -> u16 {
+    u16::from_le_bytes([self.mem_read(pos), self.mem_read(pos + 1)])
+  }
+
+  fn mem_write_u16(&mut self, pos: u16, data: u16) {
+    let bytes = data.to_le_bytes();
+    self.mem_write(pos, bytes[0]);
+    self.mem_write(pos + 1, bytes[1]);
+  }
+}
+
+impl Mem for CPU {
+  fn mem_read(&self, addr: u16) -> u8 {
+    self.bus.mem_read(addr)
+  }
+
+  fn mem_write(&mut self, addr: u16, data: u8) {
+    self.bus.mem_write(addr, data);
+  }
+}
+
 impl CPU {
 
   pub fn new() -> Self {
@@ -46,7 +73,7 @@ impl CPU {
       status: 0,
       program_counter: 0,
       stack_pointer: STACK_RESET,
-      memory: [0; 0xFFFF]
+      bus: Bus::new(),
     }
   }
 
@@ -107,26 +134,6 @@ impl CPU {
     self.update_zero_and_negative_flags(self.register_a);
   }
 
-  // Memory helpers
-
-  pub fn mem_read(&self, addr: u16) -> u8 {
-    self.memory[addr as usize]
-  }
-
-  pub fn mem_write(&mut self, addr: u16, data: u8) {
-    self.memory[addr as usize] = data;
-  }
-
-  fn mem_read_u16(&self, pos: u16) -> u16 {
-    u16::from_le_bytes([self.mem_read(pos), self.mem_read(pos + 1)])
-  }
-
-  fn mem_write_u16(&mut self, pos: u16, data: u16) {
-    let bytes = data.to_le_bytes();
-    self.mem_write(pos, bytes[0]);
-    self.mem_write(pos + 1, bytes[1]);
-  }
-
   fn stack_push(&mut self, data: u8) {
     self.mem_write(STACK_OFFSET + (self.stack_pointer as u16), data);
     self.stack_pointer = self.stack_pointer.wrapping_sub(1);
@@ -157,7 +164,9 @@ impl CPU {
     self.register_x = 0;
     self.status = (self.status & !F_INT) & !F_BREAK;
 
-    self.program_counter = self.mem_read_u16(0xFFFC);
+    // TODO: Uncomment and fix
+    // self.program_counter = self.mem_read_u16(0xFFFC);
+    self.program_counter = 0x600;
   }
 
   pub fn load_and_run(&mut self, program: Vec<u8>) {
@@ -167,7 +176,10 @@ impl CPU {
   }
 
   pub fn load(&mut self, program: Vec<u8>) {
-    self.memory[0x0600 .. (0x0600 + program.len())].copy_from_slice(&program[..]);
+    for i in 0..(program.len()) {
+      self.mem_write(0x600 + i as u16, program[i]);
+    }
+
     self.mem_write_u16(0xFFFC, 0x0600);
   }
 
