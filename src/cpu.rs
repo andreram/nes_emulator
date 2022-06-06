@@ -176,7 +176,7 @@ impl CPU {
   }
 
   pub fn load(&mut self, program: Vec<u8>) {
-    for i in 0..(program.len()) {
+    for i in 0..program.len() {
       self.mem_write(0x600 + i as u16, program[i]);
     }
 
