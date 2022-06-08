@@ -20,14 +20,10 @@ pub struct Rom {
 impl Rom {
   pub fn new(raw: &Vec<u8>) -> Result<Rom, String> {
     if raw[0..4] != NES_TAG {
-      return Err("File is no in iNES file format".to_string());
+      return Err("File is not in iNES file format".to_string());
     }
 
     let mapper = (raw[7] & 0b1111_0000) | (raw[6] >> 4);
-
-    // if mapper != 0 {
-    //   return Err(format!("Mapper {mapper} is not supported"));
-    // }
 
     let ines_ver = (raw[7] >> 2) & 0b11;
     if ines_ver != 0 {
@@ -96,5 +92,72 @@ pub mod test {
     });
 
     Rom::new(&test_rom).unwrap()
+  }
+
+  #[test]
+  fn test() {
+    let rom = test_rom();
+
+    assert_eq!(rom.prg_rom, vec![1; 2 * PRG_ROM_PAGE_SIZE]);
+    assert_eq!(rom.chr_rom, vec![2; 1 * CHR_ROM_PAGE_SIZE]);
+    assert_eq!(rom.mapper, 3);
+    assert_eq!(rom.screen_mirroring, Mirroring::VERTICAL);
+  }
+
+  #[test]
+  fn test_with_trainer() {
+    let test_rom = create_rom(TestRom {
+      header: vec![
+        0x4E, 0x45, 0x53, 0x1A, 0x02, 0x01, 0x31 | 0b100, 00, 00, 00, 00, 00, 00, 00, 00, 00,
+      ],
+      trainer: Some(vec![0; 512]),
+      prg_rom: vec![1; 2 * PRG_ROM_PAGE_SIZE],
+      chr_rom: vec![2; 1 * CHR_ROM_PAGE_SIZE],
+    });
+
+    let rom = Rom::new(&test_rom).unwrap();
+
+    assert_eq!(rom.prg_rom, vec![1; 2 * PRG_ROM_PAGE_SIZE]);
+    assert_eq!(rom.chr_rom, vec![2; 1 * CHR_ROM_PAGE_SIZE]);
+    assert_eq!(rom.mapper, 3);
+    assert_eq!(rom.screen_mirroring, Mirroring::VERTICAL);
+  }
+
+  #[test]
+  fn test_nes2_err() {
+    let test_rom = create_rom(TestRom {
+      header: vec![
+        0x4E, 0x45, 0x53, 0x1A, 0x02, 0x01, 0x31, 08, 00, 00, 00, 00, 00, 00, 00, 00,
+      ],
+      trainer: None,
+      prg_rom: vec![1; 2 * PRG_ROM_PAGE_SIZE],
+      chr_rom: vec![2; 1 * CHR_ROM_PAGE_SIZE],
+    });
+
+    let rom = Rom::new(&test_rom);
+
+    match rom {
+      Result::Ok(_) => assert!(false, "should not load rom"),
+      Result::Err(s) => assert_eq!(s, "NES2.0 format is not supported"),
+    }
+  }
+
+  #[test]
+  fn test_header_err() {
+    let test_rom = create_rom(TestRom {
+      header: vec![
+        0x4E, 0x45, 0x53, 0x00, 0x02, 0x01, 0x31, 08, 00, 00, 00, 00, 00, 00, 00, 00,
+      ],
+      trainer: None,
+      prg_rom: vec![1; 2 * PRG_ROM_PAGE_SIZE],
+      chr_rom: vec![2; 1 * CHR_ROM_PAGE_SIZE],
+    });
+
+    let rom = Rom::new(&test_rom);
+
+    match rom {
+      Result::Ok(_) => assert!(false, "should not load rom"),
+      Result::Err(s) => assert_eq!(s, "File is not in iNES file format"),
+    }
   }
 }
