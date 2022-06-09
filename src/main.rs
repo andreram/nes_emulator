@@ -2,6 +2,7 @@ pub mod cpu;
 pub mod ops;
 pub mod bus;
 pub mod rom;
+pub mod trace;
 
 use cpu::CPU;
 use cpu::Mem;

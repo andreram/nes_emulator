@@ -71,7 +71,7 @@ impl CPU {
       register_a: 0,
       register_x: 0,
       register_y: 0,
-      status: 0,
+      status: 0x24,       // TODO: Remove magic number
       program_counter: 0,
       stack_pointer: STACK_RESET,
       bus: Bus::new(rom),
