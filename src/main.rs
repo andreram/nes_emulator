@@ -13,6 +13,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use rand::Rng;
+use trace::trace;
 
 #[macro_use]
 extern crate lazy_static;
@@ -112,7 +113,7 @@ fn main() {
   //   0xea, 0xca, 0xd0, 0xfb, 0x60,
   // ];
 
-  let raw_rom = std::fs::read("snake.nes").unwrap();
+  let raw_rom = std::fs::read("nestest.nes").unwrap();
   let rom = Rom::new(&raw_rom).unwrap();
   let mut cpu = CPU::new(rom);
   // cpu.load(game_code);
@@ -122,17 +123,18 @@ fn main() {
   let mut rng = rand::thread_rng();
 
   cpu.run_with_callback(move |cpu| {
-    let rand_num_cell = 0xfe;
+    println!("{}", trace(cpu));
+    // let rand_num_cell = 0xfe;
 
-    handle_user_input(cpu, &mut event_pump);
-    cpu.mem_write(rand_num_cell, rng.gen_range(1, 16));
+    // handle_user_input(cpu, &mut event_pump);
+    // cpu.mem_write(rand_num_cell, rng.gen_range(1, 16));
 
-    if read_screen_state(cpu, &mut screen_state) {
-      texture.update(None, &screen_state, 32 * 3).unwrap();
-      canvas.copy(&texture, None, None).unwrap();
-      canvas.present();
-    }
+    // if read_screen_state(cpu, &mut screen_state) {
+    //   texture.update(None, &screen_state, 32 * 3).unwrap();
+    //   canvas.copy(&texture, None, None).unwrap();
+    //   canvas.present();
+    // }
   });
 
-  std::thread::sleep(std::time::Duration::new(0, 70000));
+  // std::thread::sleep(std::time::Duration::new(0, 70000));
 }

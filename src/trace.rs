@@ -3,7 +3,7 @@ use crate::cpu::Mem;
 use crate::cpu::AddressingMode;
 use crate::ops::OPS_MAP;
 
-fn trace(cpu: &mut CPU) -> String {
+pub fn trace(cpu: &mut CPU) -> String {
   let opcode = cpu.mem_read(cpu.program_counter);
 
   let op = OPS_MAP[&opcode];
@@ -28,8 +28,15 @@ fn trace(cpu: &mut CPU) -> String {
     AddressingMode::ZeroPage => {
       let addr = cpu.mem_read(cpu.program_counter + 1);
       let data = cpu.mem_read(addr as u16);
-      format!(" ${} = {}", args[1], data)
+      format!(" ${} = {:02X}", args[1], data)
     },
+    AddressingMode::Indirect_Y => {
+      let addr = cpu.mem_read(cpu.program_counter + 1);
+      let data = cpu.mem_read_u16(addr as u16);
+      let addr = data.wrapping_add(cpu.register_y as u16);
+      let data = cpu.mem_read(addr);
+      format!(" (${}),Y = {:04X} @ {:04X} = {:02X}", args[1], addr, addr, data)
+    }
     AddressingMode::NoneAddressing => String::from(""),
     _ => String::from(" todo"),
   };
