@@ -95,10 +95,10 @@ static OPS: [Op; 151] = [
   Op {code: 0xe8, ins: "INX", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
   Op {code: 0xc8, ins: "INY", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
 
-  Op {code: 0x4c, ins: "JMP", len: 3, cycles: 3, mode: AddressingMode::Absolute},
-  Op {code: 0x6c, ins: "JMP", len: 3, cycles: 5, mode: AddressingMode::NoneAddressing},
+  Op {code: 0x4c, ins: "JMP", len: 3, cycles: 3, mode: AddressingMode::NoneAddressing}, // AddressingMode that acts as immediate
+  Op {code: 0x6c, ins: "JMP", len: 3, cycles: 5, mode: AddressingMode::NoneAddressing}, // AddressingMode::Indirect with 6502 bug
   
-  Op {code: 0x20, ins: "JSR", len: 3, cycles: 6, mode: AddressingMode::Absolute},
+  Op {code: 0x20, ins: "JSR", len: 3, cycles: 6, mode: AddressingMode::NoneAddressing},
 
   Op {code: 0xa9, ins: "LDA", len: 2, cycles: 2, mode: AddressingMode::Immediate},
   Op {code: 0xa5, ins: "LDA", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},

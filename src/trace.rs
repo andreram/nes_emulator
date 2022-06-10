@@ -36,8 +36,38 @@ pub fn trace(cpu: &mut CPU) -> String {
       let addr = data.wrapping_add(cpu.register_y as u16);
       let data = cpu.mem_read(addr);
       format!(" (${}),Y = {:04X} @ {:04X} = {:02X}", args[1], addr, addr, data)
-    }
-    AddressingMode::NoneAddressing => String::from(""),
+    },
+    AddressingMode::Absolute => {
+      let addr = cpu.mem_read_u16(cpu.program_counter + 1);
+      let data = cpu.mem_read(addr);
+      format!(" ${:04X} = {:02X}", addr, data)
+    },
+    AddressingMode::Absolute_X => {
+      let addr = cpu.mem_read_u16(cpu.program_counter + 1);
+      let added_addr = addr.wrapping_add(cpu.register_x as u16);
+      let data = cpu.mem_read_u16(added_addr);
+      format!(" ${:04X},X @ {:04X} = {:02X}", addr, added_addr, data)
+    },
+    AddressingMode::Absolute_Y => {
+      let addr = cpu.mem_read_u16(cpu.program_counter + 1);
+      let added_addr = addr.wrapping_add(cpu.register_y as u16);
+      let data = cpu.mem_read_u16(added_addr);
+      format!(" ${:04X},Y @ {:04X} = {:02X}", addr, added_addr, data)
+    },
+    AddressingMode::NoneAddressing => {
+      match op.len {
+        1 => String::from(""),
+        2 => {
+          let offset = cpu.mem_read(cpu.program_counter + 1);
+          let addr = cpu.program_counter
+          .wrapping_add(2)
+          .wrapping_add(offset as u16);
+          format!(" ${:04X}", addr)
+        }
+        3 => format!(" ${}{}", args[2], args[1]),
+        _ => String::from(""),
+      }
+    },
     _ => String::from(" todo"),
   };
 

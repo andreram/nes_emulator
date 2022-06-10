@@ -688,7 +688,22 @@ impl CPU {
             /* Indirect */
             0x6c => {
               let addr = self.mem_read_u16(self.program_counter);
-              self.program_counter = self.mem_read_u16(addr);
+              // self.program_counter = self.mem_read_u16(addr);
+
+              // 6502 bug mode with with page boundary:
+              //  if address $3000 contains $40, $30FF contains $80, and $3100 contains $50,
+              //  the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
+              //  i.e. the 6502 took the low byte of the address from $30FF and the high byte from $3000
+
+              let indirect_addr = if addr & 0x00FF == 0x00FF {
+                let lo = self.mem_read(addr);
+                let hi = self.mem_read(addr & 0xFF00);
+                (hi as u16) << 8 | (lo as u16)
+              } else {
+                self.mem_read_u16(addr)
+              };
+
+              self.program_counter = indirect_addr;
             },
 
             _ => {},
