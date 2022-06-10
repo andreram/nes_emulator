@@ -21,42 +21,58 @@ pub fn trace(cpu: &mut CPU) -> String {
   log.push_str(&format!("{:10}", args.join(" ")));
   log.push_str(op.ins);
 
+  let (addr, value) = match op.mode {
+    AddressingMode::Immediate | AddressingMode::NoneAddressing => (0, 0),
+    _ => {
+      let addr = cpu.get_absolute_address(&op.mode, cpu.program_counter + 1);
+      (addr, cpu.mem_read(addr))
+    }
+  };
+
+  let init_addr = cpu.mem_read_u16(cpu.program_counter + 1);
+
   let args_assembly = match op.mode {
     AddressingMode::Immediate => {
       format!(" #${}", args[1])
     },
     AddressingMode::ZeroPage => {
-      let addr = cpu.mem_read(cpu.program_counter + 1);
-      let data = cpu.mem_read(addr as u16);
-      format!(" ${} = {:02X}", args[1], data)
+      format!(" ${} = {:02X}", addr, value)
+    },
+    AddressingMode::ZeroPage_X => {
+      format!(" ${},X @ {:02X} = {:02X}", args[1], addr, value)
+    },
+    AddressingMode::ZeroPage_Y => {
+      format!(" ${},X @ {:02X} = {:02X}", args[1], addr, value)
+    },
+    AddressingMode::Indirect_X => {
+      let init_addr = cpu.mem_read(cpu.program_counter + 1);
+      let wrap = init_addr.wrapping_add(cpu.register_x);
+      format!(" (${:02X},X) = {:02X} @ {:04X} = {:02X}", init_addr, wrap, addr, value)
     },
     AddressingMode::Indirect_Y => {
-      let addr = cpu.mem_read(cpu.program_counter + 1);
-      let data = cpu.mem_read_u16(addr as u16);
-      let addr = data.wrapping_add(cpu.register_y as u16);
-      let data = cpu.mem_read(addr);
-      format!(" (${}),Y = {:04X} @ {:04X} = {:02X}", args[1], addr, addr, data)
+      let wrap = addr.wrapping_sub(cpu.register_y as u16);
+      format!(" (${}),Y = {:04X} @ {:04X} = {:02X}", args[1], wrap, addr, value)
     },
     AddressingMode::Absolute => {
-      let addr = cpu.mem_read_u16(cpu.program_counter + 1);
-      let data = cpu.mem_read(addr);
-      format!(" ${:04X} = {:02X}", addr, data)
+      format!(" ${:04X} = {:02X}", addr, value)
     },
     AddressingMode::Absolute_X => {
-      let addr = cpu.mem_read_u16(cpu.program_counter + 1);
-      let added_addr = addr.wrapping_add(cpu.register_x as u16);
-      let data = cpu.mem_read_u16(added_addr);
-      format!(" ${:04X},X @ {:04X} = {:02X}", addr, added_addr, data)
+      format!(" ${:04X},X @ {:04X} = {:02X}", init_addr, addr, value)
     },
     AddressingMode::Absolute_Y => {
-      let addr = cpu.mem_read_u16(cpu.program_counter + 1);
-      let added_addr = addr.wrapping_add(cpu.register_y as u16);
-      let data = cpu.mem_read_u16(added_addr);
-      format!(" ${:04X},Y @ {:04X} = {:02X}", addr, added_addr, data)
+      format!(" ${:04X},Y @ {:04X} = {:02X}", init_addr, addr, value)
     },
     AddressingMode::NoneAddressing => {
       match op.len {
-        1 => String::from(""),
+        1 => {
+          match op.ins {
+            "ASL" | "ROL" | "LSR" | "ROR" => {
+              // accumulator addressing modes
+              String::from(" A")
+            },
+            _ => String::from(""),
+          }
+        }
         2 => {
           let offset = cpu.mem_read(cpu.program_counter + 1);
           let addr = cpu.program_counter
@@ -64,11 +80,26 @@ pub fn trace(cpu: &mut CPU) -> String {
           .wrapping_add(offset as u16);
           format!(" ${:04X}", addr)
         }
-        3 => format!(" ${}{}", args[2], args[1]),
+        3 => {
+          match op.code {
+            // jmp indirect
+            0x6C => {
+              let addr = cpu.mem_read_u16(cpu.program_counter + 1);
+              let indirect_addr = if addr & 0x00FF == 0x00FF {
+                let lo = cpu.mem_read(addr);
+                let hi = cpu.mem_read(addr & 0xFF00);
+                (hi as u16) << 8 | (lo as u16)
+              } else {
+                cpu.mem_read_u16(addr)
+              };
+              format!(" (${:04X}) = {:04X}", addr, indirect_addr)
+            }, 
+            _ => format!(" ${}{}", args[2], args[1]),
+          }
+        }
         _ => String::from(""),
       }
-    },
-    _ => String::from(" todo"),
+    }
   };
 
   log.push_str(&format!("{:29}", args_assembly));
