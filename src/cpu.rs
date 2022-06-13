@@ -71,7 +71,7 @@ impl CPU {
       register_a: 0,
       register_x: 0,
       register_y: 0,
-      status: 0x24,       // TODO: Remove magic number
+      status: 0,
       program_counter: 0,
       stack_pointer: STACK_RESET,
       bus: Bus::new(rom),
@@ -170,7 +170,10 @@ impl CPU {
   pub fn reset(&mut self) {
     self.register_a = 0;
     self.register_x = 0;
-    self.status = (self.status & !F_INT) & !F_BREAK;
+
+    // self.status = (self.status & !F_INT) & !F_BREAK;
+    // TODO: Remove magic number
+    self.status = 0x24;
 
     // TODO: Uncomment and fix
     self.program_counter = self.mem_read_u16(0xFFFC);

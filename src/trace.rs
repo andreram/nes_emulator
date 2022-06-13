@@ -36,18 +36,18 @@ pub fn trace(cpu: &mut CPU) -> String {
       format!(" #${}", args[1])
     },
     AddressingMode::ZeroPage => {
-      format!(" ${} = {:02X}", addr, value)
+      format!(" ${:02X} = {:02X}", addr, value)
     },
     AddressingMode::ZeroPage_X => {
       format!(" ${},X @ {:02X} = {:02X}", args[1], addr, value)
     },
     AddressingMode::ZeroPage_Y => {
-      format!(" ${},X @ {:02X} = {:02X}", args[1], addr, value)
+      format!(" ${},Y @ {:02X} = {:02X}", args[1], addr, value)
     },
     AddressingMode::Indirect_X => {
       let init_addr = cpu.mem_read(cpu.program_counter + 1);
       let wrap = init_addr.wrapping_add(cpu.register_x);
-      format!(" (${:02X},X) = {:02X} @ {:04X} = {:02X}", init_addr, wrap, addr, value)
+      format!(" (${:02X},X) @ {:02X} = {:04X} = {:02X}", init_addr, wrap, addr, value)
     },
     AddressingMode::Indirect_Y => {
       let wrap = addr.wrapping_sub(cpu.register_y as u16);
