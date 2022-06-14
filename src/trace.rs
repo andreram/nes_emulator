@@ -18,8 +18,13 @@ pub fn trace(cpu: &mut CPU) -> String {
     args.push(string);
   }
 
-  log.push_str(&format!("{:10}", args.join(" ")));
-  log.push_str(op.ins);
+  log.push_str(&format!("{:9}", args.join(" ")));
+
+  let ins = &format!(" {}", op.ins);
+  log.push_str(match op.ins.len() {
+    3 => ins,
+    _ => op.ins,
+  });
 
   let (addr, value) = match op.mode {
     AddressingMode::Immediate | AddressingMode::NoneAddressing => (0, 0),
@@ -74,7 +79,7 @@ pub fn trace(cpu: &mut CPU) -> String {
           }
         }
         2 => {
-          let offset = cpu.mem_read(cpu.program_counter + 1);
+          let offset = cpu.mem_read(cpu.program_counter + 1) as i8;
           let addr = cpu.program_counter
           .wrapping_add(2)
           .wrapping_add(offset as u16);

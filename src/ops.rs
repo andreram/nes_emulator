@@ -9,7 +9,7 @@ pub struct Op {
   pub mode: AddressingMode,
 }
 
-static OPS: [Op; 151] = [
+static OPS: [Op; 174] = [
   Op {code: 0x00, ins: "BRK", len: 1, cycles: 7, mode: AddressingMode::NoneAddressing},
 
   Op {code: 0x69, ins: "ADC", len: 2, cycles: 2, mode: AddressingMode::Immediate},
@@ -128,6 +128,29 @@ static OPS: [Op; 151] = [
   Op {code: 0x5e, ins: "LSR", len: 3, cycles: 7, mode: AddressingMode::Absolute_X},
 
   Op {code: 0xea, ins: "NOP", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+  Op {code: 0x1a, ins: "*NOP", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+  Op {code: 0x3a, ins: "*NOP", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+  Op {code: 0x5a, ins: "*NOP", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+  Op {code: 0x7a, ins: "*NOP", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+  Op {code: 0xda, ins: "*NOP", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+  Op {code: 0xfa, ins: "*NOP", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+  Op {code: 0x80, ins: "*NOP", len: 2, cycles: 2, mode: AddressingMode::Immediate},
+  Op {code: 0x04, ins: "*NOP", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},
+  Op {code: 0x44, ins: "*NOP", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},
+  Op {code: 0x64, ins: "*NOP", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},
+  Op {code: 0x0c, ins: "*NOP", len: 3, cycles: 4, mode: AddressingMode::Absolute},
+  Op {code: 0x14, ins: "*NOP", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x34, ins: "*NOP", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x54, ins: "*NOP", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x74, ins: "*NOP", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0xd4, ins: "*NOP", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0xf4, ins: "*NOP", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x1c, ins: "*NOP", len: 3, cycles: 4, mode: AddressingMode::Absolute_X},
+  Op {code: 0x3c, ins: "*NOP", len: 3, cycles: 4, mode: AddressingMode::Absolute_X},
+  Op {code: 0x5c, ins: "*NOP", len: 3, cycles: 4, mode: AddressingMode::Absolute_X},
+  Op {code: 0x7c, ins: "*NOP", len: 3, cycles: 4, mode: AddressingMode::Absolute_X},
+  Op {code: 0xdc, ins: "*NOP", len: 3, cycles: 4, mode: AddressingMode::Absolute_X},
+  Op {code: 0xfc, ins: "*NOP", len: 3, cycles: 4, mode: AddressingMode::Absolute_X},
 
   Op {code: 0x09, ins: "ORA", len: 2, cycles: 2, mode: AddressingMode::Immediate},
   Op {code: 0x05, ins: "ORA", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},

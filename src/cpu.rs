@@ -535,6 +535,7 @@ impl CPU {
 
   // Branch control instructions
   fn branch(&mut self, flag: u8, branch_on_set: bool) {
+    // Casted as i8 for signed extension when casted to u16
     let offset = self.mem_read(self.program_counter) as i8;
     let flag_set = self.status & flag != 0;
 
@@ -576,6 +577,17 @@ impl CPU {
 
   fn plp(&mut self) {
     self.status = (self.stack_pop() & !F_BREAK) | (self.status & F_BREAK);
+  }
+
+  fn nop(&self, mode: &AddressingMode) {
+    match mode {
+      AddressingMode::NoneAddressing => {},
+      AddressingMode::Immediate => {},
+      _ => {
+        let addr = self.get_operand_address(mode);
+        self.mem_read(addr);
+      },
+    };
   }
 
   pub fn run(&mut self) {
@@ -737,6 +749,8 @@ impl CPU {
         "PLP" => self.plp(),
 
         "NOP" => {},
+
+        "*NOP" => self.nop(&op.mode),
 
         "BRK" => return,
 
