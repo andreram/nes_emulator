@@ -533,6 +533,46 @@ impl CPU {
     }
   }
 
+  fn lax(&mut self, mode: &AddressingMode) {
+    self.lda(mode);
+    self.tax();
+  }
+
+  fn sax(&mut self, mode: &AddressingMode) {
+    let addr = self.get_operand_address(mode);
+    self.mem_write(addr, self.register_a & self.register_x);
+  }
+
+  fn dcp(&mut self, mode: &AddressingMode) {
+    self.dec(mode);
+    self.compare(mode, self.register_a);
+  }
+
+  fn isb(&mut self, mode: &AddressingMode) {
+    self.inc(mode);
+    self.sbc(mode);
+  }
+
+  fn slo(&mut self, mode: &AddressingMode) {
+    self.asl(mode);
+    self.or(mode);
+  }
+
+  fn rla(&mut self, mode: &AddressingMode) {
+    self.rol(mode);
+    self.and(mode);
+  }
+
+  fn sre(&mut self, mode: &AddressingMode) {
+    self.lsr(mode);
+    self.eor(mode);
+  }
+
+  fn rra(&mut self, mode: &AddressingMode) {
+    self.ror(mode);
+    self.adc(mode);
+  }
+
   // Branch control instructions
   fn branch(&mut self, flag: u8, branch_on_set: bool) {
     // Casted as i8 for signed extension when casted to u16
@@ -751,6 +791,24 @@ impl CPU {
         "NOP" => {},
 
         "*NOP" => self.nop(&op.mode),
+
+        "*LAX" => self.lax(&op.mode),
+
+        "*SAX" => self.sax(&op.mode),
+
+        "*SBC" => self.sbc(&op.mode),
+
+        "*DCP" => self.dcp(&op.mode),
+
+        "*ISB" => self.isb(&op.mode),
+
+        "*SLO" => self.slo(&op.mode),
+
+        "*RLA" => self.rla(&op.mode),
+
+        "*SRE" => self.sre(&op.mode),
+
+        "*RRA" => self.rra(&op.mode),
 
         "BRK" => return,
 

@@ -9,7 +9,7 @@ pub struct Op {
   pub mode: AddressingMode,
 }
 
-static OPS: [Op; 174] = [
+static OPS: [Op; 227] = [
   Op {code: 0x00, ins: "BRK", len: 1, cycles: 7, mode: AddressingMode::NoneAddressing},
 
   Op {code: 0x69, ins: "ADC", len: 2, cycles: 2, mode: AddressingMode::Immediate},
@@ -189,6 +189,7 @@ static OPS: [Op; 174] = [
   Op {code: 0xf9, ins: "SBC", len: 3, cycles: 4, mode: AddressingMode::Absolute_Y},
   Op {code: 0xe1, ins: "SBC", len: 2, cycles: 6, mode: AddressingMode::Indirect_X},
   Op {code: 0xf1, ins: "SBC", len: 2, cycles: 5, mode: AddressingMode::Indirect_Y},
+  Op {code: 0xeb, ins: "*SBC", len: 2, cycles: 2, mode: AddressingMode::Immediate},
 
   Op {code: 0x38, ins: "SEC", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
   Op {code: 0xf8, ins: "SED", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
@@ -216,6 +217,66 @@ static OPS: [Op; 174] = [
   Op {code: 0x8a, ins: "TXA", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
   Op {code: 0x9a, ins: "TXS", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
   Op {code: 0x98, ins: "TYA", len: 1, cycles: 2, mode: AddressingMode::NoneAddressing},
+
+  Op {code: 0xa3, ins: "*LAX", len: 2, cycles: 6, mode: AddressingMode::Indirect_X},
+  Op {code: 0xa7, ins: "*LAX", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},
+  Op {code: 0xaf, ins: "*LAX", len: 3, cycles: 4, mode: AddressingMode::Absolute},
+  Op {code: 0xb3, ins: "*LAX", len: 2, cycles: 5, mode: AddressingMode::Indirect_Y},
+  Op {code: 0xb7, ins: "*LAX", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_Y},
+  Op {code: 0xbf, ins: "*LAX", len: 3, cycles: 4, mode: AddressingMode::Absolute_Y},
+
+  Op {code: 0x83, ins: "*SAX", len: 2, cycles: 6, mode: AddressingMode::Indirect_X},
+  Op {code: 0x87, ins: "*SAX", len: 2, cycles: 3, mode: AddressingMode::ZeroPage},
+  Op {code: 0x8f, ins: "*SAX", len: 3, cycles: 4, mode: AddressingMode::Absolute},
+  Op {code: 0x97, ins: "*SAX", len: 2, cycles: 4, mode: AddressingMode::ZeroPage_Y},
+
+  Op {code: 0xc3, ins: "*DCP", len: 2, cycles: 8, mode: AddressingMode::Indirect_X},
+  Op {code: 0xc7, ins: "*DCP", len: 2, cycles: 5, mode: AddressingMode::ZeroPage},
+  Op {code: 0xcf, ins: "*DCP", len: 3, cycles: 6, mode: AddressingMode::Absolute},
+  Op {code: 0xd3, ins: "*DCP", len: 2, cycles: 8, mode: AddressingMode::Indirect_Y},
+  Op {code: 0xd7, ins: "*DCP", len: 2, cycles: 6, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0xdb, ins: "*DCP", len: 3, cycles: 7, mode: AddressingMode::Absolute_Y},
+  Op {code: 0xdf, ins: "*DCP", len: 3, cycles: 7, mode: AddressingMode::Absolute_X},
+
+  Op {code: 0xe3, ins: "*ISB", len: 2, cycles: 8, mode: AddressingMode::Indirect_X},
+  Op {code: 0xe7, ins: "*ISB", len: 2, cycles: 5, mode: AddressingMode::ZeroPage},
+  Op {code: 0xef, ins: "*ISB", len: 3, cycles: 6, mode: AddressingMode::Absolute},
+  Op {code: 0xf3, ins: "*ISB", len: 2, cycles: 8, mode: AddressingMode::Indirect_Y},
+  Op {code: 0xf7, ins: "*ISB", len: 2, cycles: 6, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0xfb, ins: "*ISB", len: 3, cycles: 7, mode: AddressingMode::Absolute_Y},
+  Op {code: 0xff, ins: "*ISB", len: 3, cycles: 7, mode: AddressingMode::Absolute_X},
+
+  Op {code: 0x03, ins: "*SLO", len: 2, cycles: 8, mode: AddressingMode::Indirect_X},
+  Op {code: 0x07, ins: "*SLO", len: 2, cycles: 5, mode: AddressingMode::ZeroPage},
+  Op {code: 0x0f, ins: "*SLO", len: 3, cycles: 6, mode: AddressingMode::Absolute},
+  Op {code: 0x13, ins: "*SLO", len: 2, cycles: 8, mode: AddressingMode::Indirect_Y},
+  Op {code: 0x17, ins: "*SLO", len: 2, cycles: 6, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x1b, ins: "*SLO", len: 3, cycles: 7, mode: AddressingMode::Absolute_Y},
+  Op {code: 0x1f, ins: "*SLO", len: 3, cycles: 7, mode: AddressingMode::Absolute_X},
+
+  Op {code: 0x23, ins: "*RLA", len: 2, cycles: 8, mode: AddressingMode::Indirect_X},
+  Op {code: 0x27, ins: "*RLA", len: 2, cycles: 5, mode: AddressingMode::ZeroPage},
+  Op {code: 0x2f, ins: "*RLA", len: 3, cycles: 6, mode: AddressingMode::Absolute},
+  Op {code: 0x33, ins: "*RLA", len: 2, cycles: 8, mode: AddressingMode::Indirect_Y},
+  Op {code: 0x37, ins: "*RLA", len: 2, cycles: 6, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x3b, ins: "*RLA", len: 3, cycles: 7, mode: AddressingMode::Absolute_Y},
+  Op {code: 0x3f, ins: "*RLA", len: 3, cycles: 7, mode: AddressingMode::Absolute_X},
+
+  Op {code: 0x43, ins: "*SRE", len: 2, cycles: 8, mode: AddressingMode::Indirect_X},
+  Op {code: 0x47, ins: "*SRE", len: 2, cycles: 5, mode: AddressingMode::ZeroPage},
+  Op {code: 0x4f, ins: "*SRE", len: 3, cycles: 6, mode: AddressingMode::Absolute},
+  Op {code: 0x53, ins: "*SRE", len: 2, cycles: 8, mode: AddressingMode::Indirect_Y},
+  Op {code: 0x57, ins: "*SRE", len: 2, cycles: 6, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x5b, ins: "*SRE", len: 3, cycles: 7, mode: AddressingMode::Absolute_Y},
+  Op {code: 0x5f, ins: "*SRE", len: 3, cycles: 7, mode: AddressingMode::Absolute_X},
+
+  Op {code: 0x63, ins: "*RRA", len: 2, cycles: 8, mode: AddressingMode::Indirect_X},
+  Op {code: 0x67, ins: "*RRA", len: 2, cycles: 5, mode: AddressingMode::ZeroPage},
+  Op {code: 0x6f, ins: "*RRA", len: 3, cycles: 6, mode: AddressingMode::Absolute},
+  Op {code: 0x73, ins: "*RRA", len: 2, cycles: 8, mode: AddressingMode::Indirect_Y},
+  Op {code: 0x77, ins: "*RRA", len: 2, cycles: 6, mode: AddressingMode::ZeroPage_X},
+  Op {code: 0x7b, ins: "*RRA", len: 3, cycles: 7, mode: AddressingMode::Absolute_Y},
+  Op {code: 0x7f, ins: "*RRA", len: 3, cycles: 7, mode: AddressingMode::Absolute_X},
 ];
 
 lazy_static! {
