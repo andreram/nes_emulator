@@ -3,10 +3,12 @@ pub mod ops;
 pub mod bus;
 pub mod rom;
 pub mod trace;
+pub mod ppu;
 
 use cpu::CPU;
 use cpu::Mem;
 use rom::Rom;
+use rom::Mirroring;
 use sdl2::event::Event;
 use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
@@ -14,9 +16,13 @@ use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use rand::Rng;
 use trace::trace;
+use ppu::PPU;
 
 #[macro_use]
 extern crate lazy_static;
+
+#[macro_use]
+extern crate bitflags;
 
 fn main() {
   let scale_factor = 10.0;
@@ -73,7 +79,7 @@ fn main() {
     }
  }
 
- fn read_screen_state(cpu: &CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
+ fn read_screen_state(cpu: &mut CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
    let mut frame_idx = 0;
    let mut update = false;
    for i in 0x200..0x600u16 {
@@ -93,6 +99,7 @@ fn main() {
   let raw_rom = std::fs::read("nestest.nes").unwrap();
   let rom = Rom::new(&raw_rom).unwrap();
   let mut cpu = CPU::new(rom);
+  let ppu = PPU::new(vec![], Mirroring::VERTICAL);
 
   cpu.reset();
   cpu.program_counter = 0xC000;
