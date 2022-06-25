@@ -305,4 +305,39 @@ pub mod test {
       assert_eq!(status >> 7, 1);
       assert_eq!(ppu.status.bits() >> 7, 0);
   }
+
+  #[test]
+  fn test_oam_read_write() {
+      let mut ppu = PPU::new_empty_rom();
+      ppu.write_to_oam_addr(0x10);
+      ppu.write_to_oam_data(0x66);
+      ppu.write_to_oam_data(0x77);
+
+      ppu.write_to_oam_addr(0x10);
+      assert_eq!(ppu.read_oam_data(), 0x66);
+
+      ppu.write_to_oam_addr(0x11);
+      assert_eq!(ppu.read_oam_data(), 0x77);
+  }
+
+  #[test]
+  fn test_oam_dma() {
+      let mut ppu = PPU::new_empty_rom();
+
+      let mut data = [0x66; 256];
+      data[0] = 0x77;
+      data[255] = 0x88;
+
+      ppu.write_to_oam_addr(0x10);
+      ppu.write_oam_dma(&data);
+
+      ppu.write_to_oam_addr(0x0f); // wrap around, 255 + 16
+      assert_eq!(ppu.read_oam_data(), 0x88);
+
+      ppu.write_to_oam_addr(0x10);
+      assert_eq!(ppu.read_oam_data(), 0x77);
+
+      ppu.write_to_oam_addr(0x11);
+      assert_eq!(ppu.read_oam_data(), 0x66);
+  }
 }
