@@ -12,19 +12,17 @@ pub struct Bus {
 
 impl Bus {
   pub fn new(rom: Rom) -> Self {
-    let ppu = PPU::new(rom.chr_rom, rom.screen_mirroring);
     Bus {
       cpu_vram: [0; 2048],
       prg_rom: rom.prg_rom,
       program_counter: [0x0, 0x86],
-      ppu: ppu,
+      ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
     }
   }
 }
 
 const RAM: u16 = 0x0000;
 const RAM_MIRRORS_END: u16 = 0x1FFF;
-const PPU_REGISTERS: u16 = 0x2000;
 const PPU_REGISTERS_MIRRORS_END: u16 = 0x3FFF;
 const PRG_ROM_MAP: u16 = 0x8000;
 const PRG_ROM_MAP_END: u16 = 0xFFFF;
@@ -65,8 +63,8 @@ impl Mem for Bus {
         let mirror_down_addr = addr & RAM_MIRROR_MASK;
         self.cpu_vram[mirror_down_addr as usize] = data;
       },
-      0x2000 => self.ppu.write_to_contol(data),
-      0x2006 => self.ppu.write_to_address(data),
+      0x2000 => self.ppu.write_to_control(data),
+      0x2006 => self.ppu.write_to_ppu_addr(data),
       0x2007 => self.ppu.write_to_data(data),
 
       0x2008 ..= PPU_REGISTERS_MIRRORS_END => {

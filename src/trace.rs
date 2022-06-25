@@ -132,6 +132,8 @@ mod test {
   #[test]
   fn test_format_trace() {
     let mut cpu = CPU::new(test_rom());
+    cpu.reset();
+
     cpu.mem_write(100, 0xa2);
     cpu.mem_write(101, 0x01);
     cpu.mem_write(102, 0xca);
@@ -167,6 +169,8 @@ mod test {
   #[test]
   fn test_format_mem_access() {
     let mut cpu = CPU::new(test_rom());
+    cpu.reset();
+
     // ORA ($33), Y
     cpu.mem_write(100, 0x11);
     cpu.mem_write(101, 0x33);
