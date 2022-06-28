@@ -40,7 +40,7 @@ impl ControlRegister {
     }
   }
 
-  pub fn should_generate_vlank_nmi(&self) -> bool {
+  pub fn should_generate_vblank_nmi(&self) -> bool {
     self.contains(ControlRegister::GENERATE_NMI)
   }
 

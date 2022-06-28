@@ -95,7 +95,11 @@ impl PPU {
   }
 
   pub fn write_to_control(&mut self, value: u8) {
+    let old_nmi_status = self.control.should_generate_vblank_nmi(); 
     self.control.update(value);
+    if !old_nmi_status && self.control.should_generate_vblank_nmi() && self.status.in_vblank() {
+      self.nmi_interrupt = Some(true);
+    }
   }
 
   pub fn write_to_mask(&mut self, value: u8) {
@@ -154,7 +158,7 @@ impl PPU {
       self.scanline += 1;
 
       if self.scanline == 241 {
-        if self.control.should_generate_vlank_nmi() {
+        if self.control.should_generate_vblank_nmi() {
           self.status.set_vblank(true);
           self.nmi_interrupt = Some(true);
         }

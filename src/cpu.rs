@@ -34,6 +34,8 @@ const F_DEC: u8 = 0b0000_1000;
 const F_INT: u8 = 0b0000_0100;
 const F_OVRFLW: u8 = 0b0100_0000;
 const F_BREAK: u8 = 0b0011_0000;
+const F_BREAK_BIT_4: u8 = 0b0001_0000;
+const F_BREAK_BIT_5: u8 = 0b0010_0000;
 
 const STACK_OFFSET: u16 = 0x100;
 const STACK_RESET: u8 = 0xfd;
@@ -632,8 +634,12 @@ impl CPU {
 
   fn interrupt_nmi(&mut self) {
     self.stack_push_u16(self.program_counter);
-    self.stack_push(self.status);
-    self.cli();
+
+    // Push status with break flag set to 10
+    self.stack_push((self.status | F_BREAK_BIT_5) & !F_BREAK_BIT_4);
+    self.sei();
+
+    self.bus.tick(2);
     self.program_counter = self.mem_read_u16(0xFFFA);
   }
 
@@ -647,7 +653,7 @@ impl CPU {
   {
     loop {
       if let Some(_) = self.bus.poll_nmi_interrupt() {
-
+        self.interrupt_nmi();
       }
 
       callback(self);

@@ -41,4 +41,8 @@ impl StatusRegister {
   pub fn set_vblank(&mut self, status: bool) {
     self.set(StatusRegister::IN_VBLANK, status);
   }
+
+  pub fn in_vblank(&self) -> bool {
+    self.contains(StatusRegister::IN_VBLANK)
+  }
 }
