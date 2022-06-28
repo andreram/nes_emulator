@@ -66,6 +66,10 @@ impl Mem for CPU {
   }
 }
 
+fn page_crossed(addr1: u16, addr2: u16) -> bool {
+  addr1 & 0xFF00 != addr2 & 0xFF00
+}
+
 impl CPU {
 
   pub fn new(rom: Rom) -> Self {
@@ -132,9 +136,35 @@ impl CPU {
     }
   }
 
+  // Side effect: Adds a cycle if a page boundary is crossed
   fn get_operand_address(&mut self, mode: &AddressingMode) -> u16 {
     match mode {
       AddressingMode::Immediate => self.program_counter,
+      AddressingMode::Absolute_X | AddressingMode::Absolute_Y => {
+        let base = self.mem_read_u16(self.program_counter);
+        let addr = self.get_absolute_address(mode, self.program_counter);
+
+        if page_crossed(base, addr) {
+          self.bus.tick(1);
+        }
+
+        addr
+      },
+      AddressingMode::Indirect_Y => {
+        let base = self.mem_read(self.program_counter);
+
+        let lo = self.mem_read(base as u16);
+        let hi = self.mem_read(base.wrapping_add(1) as u16);
+        let deref_base = u16::from_le_bytes([lo, hi]);
+
+        let addr = self.get_absolute_address(mode, self.program_counter);
+
+        if page_crossed(deref_base, addr) {
+          self.bus.tick(1);
+        }
+
+        addr
+      }
       _ => self.get_absolute_address(mode, self.program_counter),
     }
   }
@@ -577,14 +607,21 @@ impl CPU {
 
   // Branch control instructions
   fn branch(&mut self, flag: u8, branch_on_set: bool) {
-    // Casted as i8 for signed extension when casted to u16
-    let offset = self.mem_read(self.program_counter) as i8;
     let flag_set = self.status & flag != 0;
 
     if flag_set == branch_on_set {
-      self.program_counter = self.program_counter
+      self.bus.tick(1);
+
+      // Casted as i8 for signed extension when casted to u16
+      let offset = self.mem_read(self.program_counter) as i8;
+
+      let jump_addr = self.program_counter
         .wrapping_add(1)
         .wrapping_add(offset as u16);
+
+      if page_crossed(self.program_counter.wrapping_add(1), jump_addr) {
+        self.bus.tick(1);
+      }
     }
   }
 
@@ -639,7 +676,7 @@ impl CPU {
     self.stack_push((self.status | F_BREAK_BIT_5) & !F_BREAK_BIT_4);
     self.sei();
 
-    self.bus.tick(2);
+    self.bus.tick(2); // NMI cycles
     self.program_counter = self.mem_read_u16(0xFFFA);
   }
 
