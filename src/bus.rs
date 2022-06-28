@@ -8,6 +8,7 @@ pub struct Bus {
   // TODO: Remove this
   program_counter: [u8; 2],
   ppu: PPU,
+  cycles: usize,
 }
 
 impl Bus {
@@ -17,6 +18,7 @@ impl Bus {
       prg_rom: rom.prg_rom,
       program_counter: [0x0, 0x86],
       ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
+      cycles: 0,
     }
   }
 }
@@ -93,5 +95,14 @@ impl Bus {
     }
 
     self.prg_rom[addr as usize]
+  }
+
+  pub fn tick(&mut self, cycles: u8) {
+    self.cycles += cycles as usize;
+    self.ppu.tick(cycles * 3);
+  }
+
+  pub fn poll_nmi_interrupt(&mut self) -> Option<bool> {
+    self.ppu.poll_nmi_interrupt()
   }
 }

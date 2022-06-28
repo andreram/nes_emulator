@@ -630,6 +630,13 @@ impl CPU {
     };
   }
 
+  fn interrupt_nmi(&mut self) {
+    self.stack_push_u16(self.program_counter);
+    self.stack_push(self.status);
+    self.cli();
+    self.program_counter = self.mem_read_u16(0xFFFA);
+  }
+
   pub fn run(&mut self) {
     self.run_with_callback(|_| {});
   }
@@ -639,6 +646,10 @@ impl CPU {
     F: FnMut(&mut CPU)
   {
     loop {
+      if let Some(_) = self.bus.poll_nmi_interrupt() {
+
+      }
+
       callback(self);
 
       // Fetch next instruction
@@ -814,6 +825,8 @@ impl CPU {
 
         _ => panic!("unknown opcode: {}", opcode),
       }
+
+      self.bus.tick(op.cycles);
 
       if program_counter_state == self.program_counter {
         self.program_counter += (op.len - 1) as u16;

@@ -21,6 +21,9 @@ pub struct PPU {
   scroll: ScrollRegister,
   status: StatusRegister,
   internal_data_buf: u8,
+  cycles: usize,
+  scanline: u16,
+  nmi_interrupt: Option<bool>,
 }
 
 impl PPU {
@@ -33,6 +36,9 @@ impl PPU {
       oam_data: [0; 256],
       palette_table: [0; 32],
       internal_data_buf: 0,
+      cycles: 0,
+      scanline: 0,
+      nmi_interrupt: None,
 
       address: AddrRegister::new(),
       control: ControlRegister::new(),
@@ -139,6 +145,30 @@ impl PPU {
     for i in data.iter() {
       self.write_to_oam_data(*i);
     }
+  }
+
+  pub fn tick(&mut self, cycles: u8) {
+    self.cycles += cycles as usize;
+    if self.cycles >= 341 {
+      self.cycles = self.cycles - 341;
+      self.scanline += 1;
+
+      if self.scanline == 241 {
+        if self.control.should_generate_vlank_nmi() {
+          self.status.set_vblank(true);
+          self.nmi_interrupt = Some(true);
+        }
+      }
+
+      if self.scanline >= 262 {
+        self.scanline = 0;
+        self.status.set_vblank(false);
+      }
+    }
+  }
+
+  pub fn poll_nmi_interrupt(&mut self) -> Option<bool> {
+    self.nmi_interrupt.take()
   }
 }
 
