@@ -168,6 +168,10 @@ fn main() {
 
   cpu.reset();
   cpu.run();
+  // cpu.run_with_callback(move |cpu| {
+  //    println!("{}", trace(cpu));
+  // });
+
 
   // let mut cpu = CPU::new(rom);
   // let ppu = PPU::new(vec![], Mirroring::VERTICAL);

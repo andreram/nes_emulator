@@ -78,7 +78,7 @@ impl<'a> CPU<'a> {
       register_a: 0,
       register_x: 0,
       register_y: 0,
-      status: 0,
+      status: 0, // TODO: Change to 0x24 and fix tests
       program_counter: 0,
       stack_pointer: STACK_RESET,
       bus: Bus::new(rom, |_: &PPU| {}),
@@ -218,6 +218,8 @@ impl<'a> CPU<'a> {
   pub fn reset(&mut self) {
     self.register_a = 0;
     self.register_x = 0;
+    self.register_y = 0;
+    self.stack_pointer = STACK_RESET;
 
     // self.status = (self.status & !F_INT) & !F_BREAK;
     // TODO: Remove magic number
@@ -225,7 +227,7 @@ impl<'a> CPU<'a> {
 
     // TODO: Uncomment and fix
     self.program_counter = self.mem_read_u16(0xFFFC);
-    // self.program_counter = 0x8600;
+    // self.program_counter = 0x0600;
   }
 
   pub fn load_and_run(&mut self, program: Vec<u8>) {
@@ -239,7 +241,7 @@ impl<'a> CPU<'a> {
       self.mem_write(0x600 + i as u16, program[i]);
     }
 
-    self.mem_write_u16(0xFFFC, 0x600);
+    // self.mem_write_u16(0xFFFC, 0x600);
   }
 
   // Flag helpers
