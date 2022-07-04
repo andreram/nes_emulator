@@ -1,15 +1,16 @@
 use crate::ops::OPS_MAP;
 use crate::bus::Bus;
 use crate::rom::Rom;
+use crate::ppu::PPU;
 
-pub struct CPU {
+pub struct CPU<'a> {
   pub register_a: u8,
   pub register_x: u8,
   pub register_y: u8,
   pub status: u8,
   pub program_counter: u16,
   pub stack_pointer: u8, 
-  pub bus: Bus,
+  pub bus: Bus<'a>,
 }
 
 #[derive(Debug)]
@@ -56,7 +57,7 @@ pub trait Mem {
   }
 }
 
-impl Mem for CPU {
+impl<'a> Mem for CPU<'a> {
   fn mem_read(&mut self, addr: u16) -> u8 {
     self.bus.mem_read(addr)
   }
@@ -70,7 +71,7 @@ fn page_crossed(addr1: u16, addr2: u16) -> bool {
   addr1 & 0xFF00 != addr2 & 0xFF00
 }
 
-impl CPU {
+impl<'a> CPU<'a> {
 
   pub fn new(rom: Rom) -> Self {
     CPU {
@@ -80,7 +81,22 @@ impl CPU {
       status: 0,
       program_counter: 0,
       stack_pointer: STACK_RESET,
-      bus: Bus::new(rom),
+      bus: Bus::new(rom, |_: &PPU| {}),
+    }
+  }
+
+  pub fn new_with_gameloop<F>(rom: Rom, gameloop_callback: F) -> Self
+  where
+    F: FnMut(&PPU) + 'a,
+  {
+    CPU {
+      register_a: 0,
+      register_x: 0,
+      register_y: 0,
+      status: 0,
+      program_counter: 0,
+      stack_pointer: STACK_RESET,
+      bus: Bus::new(rom, gameloop_callback),
     }
   }
 

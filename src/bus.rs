@@ -2,25 +2,14 @@ use crate::cpu::Mem;
 use crate::rom::Rom;
 use crate::ppu::PPU;
 
-pub struct Bus {
+pub struct Bus<'call> {
   cpu_vram: [u8; 2048],
   prg_rom: Vec<u8>,
   // TODO: Remove this
   program_counter: [u8; 2],
   ppu: PPU,
   cycles: usize,
-}
-
-impl Bus {
-  pub fn new(rom: Rom) -> Self {
-    Bus {
-      cpu_vram: [0; 2048],
-      prg_rom: rom.prg_rom,
-      program_counter: [0x0, 0x86],
-      ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
-      cycles: 0,
-    }
-  }
+  gameloop_callback: Box<dyn FnMut(&PPU) + 'call>,
 }
 
 const RAM: u16 = 0x0000;
@@ -33,7 +22,7 @@ const PPU_MIRROR_MASK: u16 = 0b0010_0000_0000_0111; // 0x2000 - 0x2007
 const PROGRAM_COUNTER_LO: u16 = 0xFFFC;
 const PROGRAM_COUNTER_HI: u16 = 0xFFFD;
 
-impl Mem for Bus {
+impl<'a> Mem for Bus<'a> {
   fn mem_read(&mut self, addr: u16) -> u8 {
     match addr {
       RAM ..= RAM_MIRRORS_END => {
@@ -41,8 +30,11 @@ impl Mem for Bus {
         self.cpu_vram[mirror_down_addr as usize]
       },
       0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 | 0x4014 => {
-        panic!("Attempted to read from write-only PPU address {:x}", addr);
+        // panic!("Attempted to read from write-only PPU address {:x}", addr);
+        0
       },
+      0x2002 => self.ppu.read_status(),
+      0x2004 => self.ppu.read_oam_data(),
       0x2007 => self.ppu.read_data(),
 
       0x2008 ..= PPU_REGISTERS_MIRRORS_END => {
@@ -66,8 +58,24 @@ impl Mem for Bus {
         self.cpu_vram[mirror_down_addr as usize] = data;
       },
       0x2000 => self.ppu.write_to_control(data),
+      0x2001 => self.ppu.write_to_mask(data),
+      0x2003 => self.ppu.write_to_oam_addr(data),
+      0x2004 => self.ppu.write_to_oam_data(data),
+      0x2005 => self.ppu.write_to_scroll(data),
       0x2006 => self.ppu.write_to_ppu_addr(data),
       0x2007 => self.ppu.write_to_data(data),
+
+      0x2002 => panic!("Attempted to write to PPU status register"),
+
+      0x4014 => {
+        let mut buf: [u8; 256] = [0; 256];
+        for i in 0..=0xFF {
+          let hi = (data as u16) << 8;
+          buf[i] = self.mem_read(hi + i as u16);
+        }
+
+        self.ppu.write_oam_dma(&buf);
+      }
 
       0x2008 ..= PPU_REGISTERS_MIRRORS_END => {
         let mirror_down_addr = addr & PPU_MIRROR_MASK;
@@ -85,7 +93,21 @@ impl Mem for Bus {
   }
 }
 
-impl Bus {
+impl<'a> Bus<'a> {
+  pub fn new<'call, F>(rom: Rom, gameloop_callback: F) -> Bus<'call>
+  where
+    F: FnMut(&PPU) + 'call,
+  {
+    Bus {
+      cpu_vram: [0; 2048],
+      prg_rom: rom.prg_rom,
+      program_counter: [0x0, 0x86],
+      ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
+      cycles: 0,
+      gameloop_callback: Box::from(gameloop_callback),
+    }
+  }
+
   fn read_prg_rom(&self, mut addr: u16) -> u8 {
     addr -= 0x8000;
 
@@ -99,7 +121,14 @@ impl Bus {
 
   pub fn tick(&mut self, cycles: u8) {
     self.cycles += cycles as usize;
+
+    let nmi_before = self.ppu.nmi_interrupt_ready();
     self.ppu.tick(cycles * 3);
+    let nmi_after = self.ppu.nmi_interrupt_ready();
+
+    if !nmi_before && nmi_after {
+      (self.gameloop_callback)(&self.ppu);
+    }
   }
 
   pub fn poll_nmi_interrupt(&mut self) -> Option<bool> {

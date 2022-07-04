@@ -16,7 +16,7 @@ pub struct PPU {
   pub mirroring: Mirroring,
 
   address: AddrRegister,
-  control: ControlRegister,
+  pub control: ControlRegister,
   mask: MaskRegister,
   scroll: ScrollRegister,
   status: StatusRegister,
@@ -123,7 +123,7 @@ impl PPU {
     let addr = self.address.get();
 
     match addr {
-      0..=0x1fff => panic!("Attempted to write to CHR ROM space: {:x}", addr),
+      0..=0x1fff => println!("Attempted to write to CHR ROM space: {:x}", addr),
       0x2000..=0x3eff => self.vram[self.mirror_vram_addr(addr) as usize] = data,
       0x3f00..=0x3fff => self.palette_table[(addr & 0x1f) as usize] = data,
       _ => panic!("unexpected access to mirrored space {:x}", addr),
@@ -173,6 +173,14 @@ impl PPU {
 
   pub fn poll_nmi_interrupt(&mut self) -> Option<bool> {
     self.nmi_interrupt.take()
+  }
+
+  pub fn background_pattern_table_addr(&self) -> u16 {
+    self.control.background_pattern_table_addr()
+  }
+
+  pub fn nmi_interrupt_ready(&mut self) -> bool {
+    self.nmi_interrupt.is_some()
   }
 }
 
