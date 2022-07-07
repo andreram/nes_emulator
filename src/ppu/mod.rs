@@ -158,8 +158,8 @@ impl PPU {
       self.scanline += 1;
 
       if self.scanline == 241 {
+        self.status.set_vblank(true);
         if self.control.should_generate_vblank_nmi() {
-          self.status.set_vblank(true);
           self.nmi_interrupt = Some(true);
         }
       }

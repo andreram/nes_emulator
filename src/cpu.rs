@@ -640,6 +640,8 @@ impl<'a> CPU<'a> {
       if page_crossed(self.program_counter.wrapping_add(1), jump_addr) {
         self.bus.tick(1);
       }
+
+      self.program_counter = jump_addr;
     }
   }
 
