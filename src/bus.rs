@@ -45,7 +45,7 @@ impl<'a> Mem for Bus<'a> {
       // PROGRAM_COUNTER_HI => self.program_counter[1],
       PRG_ROM_MAP ..= PRG_ROM_MAP_END => self.read_prg_rom(addr),
       _ => {
-        println!("Ignoring mem access at {:x}", addr);
+        // println!("Ignoring mem access at {:x}", addr);
         0
       }
     }
@@ -87,7 +87,7 @@ impl<'a> Mem for Bus<'a> {
         panic!("Attempted to write to cartridge ROM space");
       }
       _ => {
-        println!("Ignoring mem write at {:x}", addr);
+        // println!("Ignoring mem write at {:x}", addr);
       }
     }
   }

@@ -126,10 +126,10 @@ fn main() {
           upper = upper >> 1;
           lower = lower >> 1;
           let rgb = match value {
-            0 => palette::SYSTEM_PALLETE[0x01],
-            1 => palette::SYSTEM_PALLETE[0x23],
-            2 => palette::SYSTEM_PALLETE[0x27],
-            3 => palette::SYSTEM_PALLETE[0x30],
+            0 => palette::SYSTEM_PALLETTE[0x01],
+            1 => palette::SYSTEM_PALLETTE[0x23],
+            2 => palette::SYSTEM_PALLETTE[0x27],
+            3 => palette::SYSTEM_PALLETTE[0x30],
             _ => panic!("unreachable"),
           };
 
