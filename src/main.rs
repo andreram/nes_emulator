@@ -5,6 +5,7 @@ pub mod rom;
 pub mod trace;
 pub mod ppu;
 pub mod render;
+pub mod joypad;
 
 use cpu::CPU;
 use cpu::Mem;
@@ -20,6 +21,9 @@ use trace::trace;
 use ppu::PPU;
 use render::frame::Frame;
 use render::palette;
+use joypad::Joypad;
+use joypad::JoypadButton;
+use std::collections::HashMap;
 
 #[macro_use]
 extern crate lazy_static;
@@ -148,7 +152,17 @@ fn main() {
 
   let mut frame = Frame::new();
 
-  let mut cpu = CPU::new_with_gameloop(rom, move |ppu: &PPU| {
+  let mut key_map = HashMap::new();
+  key_map.insert(Keycode::Down, JoypadButton::DOWN);
+  key_map.insert(Keycode::Up, JoypadButton::UP);
+  key_map.insert(Keycode::Right, JoypadButton::RIGHT);
+  key_map.insert(Keycode::Left, JoypadButton::LEFT);
+  key_map.insert(Keycode::Space, JoypadButton::SELECT);
+  key_map.insert(Keycode::Return, JoypadButton::START);
+  key_map.insert(Keycode::A, JoypadButton::BUTTON_A);
+  key_map.insert(Keycode::S, JoypadButton::BUTTON_B);
+
+  let mut cpu = CPU::new_with_gameloop(rom, move |ppu: &PPU, joypad: &mut Joypad| {
     render::render(ppu, &mut frame);
     texture.update(None, &frame.data, 256 * 3).unwrap();
     canvas.copy(&texture, None, None).unwrap();
@@ -161,6 +175,18 @@ fn main() {
           keycode: Some(Keycode::Escape),
           ..
         } => std::process::exit(0),
+
+        Event::KeyDown { keycode, .. } => {
+          if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+            joypad.set_button_pressed(*key, true);
+          }
+        },
+
+        Event::KeyUp { keycode, .. } => {
+          if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+            joypad.set_button_pressed(*key, false);
+          }
+        },
         _ => {},
       }
     }

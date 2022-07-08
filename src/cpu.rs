@@ -2,6 +2,7 @@ use crate::ops::OPS_MAP;
 use crate::bus::Bus;
 use crate::rom::Rom;
 use crate::ppu::PPU;
+use crate::joypad::Joypad;
 
 pub struct CPU<'a> {
   pub register_a: u8,
@@ -81,13 +82,13 @@ impl<'a> CPU<'a> {
       status: 0, // TODO: Change to 0x24 and fix tests
       program_counter: 0,
       stack_pointer: STACK_RESET,
-      bus: Bus::new(rom, |_: &PPU| {}),
+      bus: Bus::new(rom, |_: &PPU, _: &mut Joypad| {}),
     }
   }
 
   pub fn new_with_gameloop<F>(rom: Rom, gameloop_callback: F) -> Self
   where
-    F: FnMut(&PPU) + 'a,
+    F: FnMut(&PPU, &mut Joypad) + 'a,
   {
     CPU {
       register_a: 0,

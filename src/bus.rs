@@ -1,6 +1,7 @@
 use crate::cpu::Mem;
 use crate::rom::Rom;
 use crate::ppu::PPU;
+use crate::joypad::Joypad;
 
 pub struct Bus<'call> {
   cpu_vram: [u8; 2048],
@@ -8,8 +9,9 @@ pub struct Bus<'call> {
   // TODO: Remove this
   // program_counter: [u8; 2],
   ppu: PPU,
+  joypad: Joypad,
   cycles: usize,
-  gameloop_callback: Box<dyn FnMut(&PPU) + 'call>,
+  gameloop_callback: Box<dyn FnMut(&PPU, &mut Joypad) + 'call>,
 }
 
 const RAM: u16 = 0x0000;
@@ -36,6 +38,8 @@ impl<'a> Mem for Bus<'a> {
       0x2002 => self.ppu.read_status(),
       0x2004 => self.ppu.read_oam_data(),
       0x2007 => self.ppu.read_data(),
+
+      0x4016 => self.joypad.read(),
 
       0x2008 ..= PPU_REGISTERS_MIRRORS_END => {
         let mirror_down_addr = addr & PPU_MIRROR_MASK;
@@ -77,6 +81,8 @@ impl<'a> Mem for Bus<'a> {
         self.ppu.write_oam_dma(&buf);
       }
 
+      0x4016 => self.joypad.write(data),
+
       0x2008 ..= PPU_REGISTERS_MIRRORS_END => {
         let mirror_down_addr = addr & PPU_MIRROR_MASK;
         self.mem_write(mirror_down_addr, data);
@@ -96,13 +102,14 @@ impl<'a> Mem for Bus<'a> {
 impl<'a> Bus<'a> {
   pub fn new<'call, F>(rom: Rom, gameloop_callback: F) -> Bus<'call>
   where
-    F: FnMut(&PPU) + 'call,
+    F: FnMut(&PPU, &mut Joypad) + 'call,
   {
     Bus {
       cpu_vram: [0; 2048],
       prg_rom: rom.prg_rom,
       // program_counter: [0x0, 0x86],
       ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
+      joypad: Joypad::new(),
       cycles: 0,
       gameloop_callback: Box::from(gameloop_callback),
     }
@@ -127,7 +134,7 @@ impl<'a> Bus<'a> {
     let nmi_after = self.ppu.nmi_interrupt_ready();
 
     if !nmi_before && nmi_after {
-      (self.gameloop_callback)(&self.ppu);
+      (self.gameloop_callback)(&self.ppu, &mut self.joypad);
     }
   }
 

@@ -8,6 +8,7 @@ const TILE_SIZE_BYTES: u16 = 16;
 const BG_SCREEN_WIDTH_TILES: usize = 32;
 const META_TILE_WIDTH_TILES: usize = 4;
 const BG_SCREEN_WIDTH_META_TILES: usize = BG_SCREEN_WIDTH_TILES / META_TILE_WIDTH_TILES;
+const PALETTE_GAP_BYTES: u8 = 4;
 
 // https://www.nesdev.org/wiki/PPU_palettes
 fn bg_palette(ppu: &PPU, tile_row: usize, tile_column: usize) -> [u8; 4] {
@@ -23,12 +24,12 @@ fn bg_palette(ppu: &PPU, tile_row: usize, tile_column: usize) -> [u8; 4] {
     (_,_) => panic!("should be unreachable"),
   };
 
-  let palette_start: usize = 1 + 4 * palette_idx as usize;
+  let palette_start = 1 + (palette_idx * PALETTE_GAP_BYTES) as usize;
   [ppu.palette_table[0], ppu.palette_table[palette_start], ppu.palette_table[palette_start + 1], ppu.palette_table[palette_start + 2]]
 }
 
 fn sprite_palette(ppu: &PPU, palette_idx: u8) -> [u8; 3] {
-  let palette_start = 0x11 + (palette_idx * 4) as usize;
+  let palette_start = 0x11 + (palette_idx * PALETTE_GAP_BYTES) as usize;
   [ppu.palette_table[palette_start], ppu.palette_table[palette_start + 1], ppu.palette_table[palette_start + 2]]
 }
 
