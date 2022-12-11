@@ -6,6 +6,7 @@ pub mod trace;
 pub mod ppu;
 pub mod render;
 pub mod joypad;
+pub mod apu;
 
 use cpu::CPU;
 use rom::Rom;

@@ -226,7 +226,7 @@ impl<'a> CPU<'a> {
     // TODO: Remove magic number
     self.status = 0x24;
 
-    // TODO: Uncomment and fix
+    // Switch lines for tests 
     self.program_counter = self.mem_read_u16(0xFFFC);
     // self.program_counter = 0x0600;
   }
