@@ -9,3 +9,9 @@ bitflags! {
     const PULSE_1         = 0b00000001;
   }
 }
+
+impl APUStatus {
+  pub fn new() -> Self {
+    APUStatus::from_bits_truncate(0)
+  }
+}
