@@ -40,4 +40,8 @@ impl PulseRegister {
   pub fn write_to_length(&mut self, data: u8) {
     self.length.update(data)
   }
+
+  pub fn read_length_counter(&self) -> u8 {
+    self.length.read_length()
+  }
 }

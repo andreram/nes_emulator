@@ -13,4 +13,8 @@ impl PulseLength {
   pub fn update(&mut self, data: u8) {
     self.bits = data;
   }
+
+  pub fn read_length(&self) -> u8 {
+    (self.bits & PulseLength::LENGTH_COUNTER_LOAD.bits) >> 3
+  }
 }

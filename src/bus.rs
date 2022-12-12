@@ -41,6 +41,8 @@ impl<'a> Mem for Bus<'a> {
       0x2004 => self.ppu.read_oam_data(),
       0x2007 => self.ppu.read_data(),
 
+      0x4015 => self.apu.read_status(),
+
       0x4016 => self.joypad.read(),
 
       0x2008 ..= PPU_REGISTERS_MIRRORS_END => {
