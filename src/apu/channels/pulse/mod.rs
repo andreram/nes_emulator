@@ -24,4 +24,20 @@ impl PulseRegister {
       timer: PulseTimer::new(),
     }
   }
+
+  pub fn write_to_envelope(&mut self, data: u8) {
+    self.envelope.update(data)
+  }
+
+  pub fn write_to_sweep(&mut self, data: u8) {
+    self.sweep.update(data)
+  }
+
+  pub fn write_to_timer(&mut self, data: u8) {
+    self.timer.update(data)
+  }
+
+  pub fn write_to_length(&mut self, data: u8) {
+    self.length.update(data)
+  }
 }

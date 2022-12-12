@@ -1,6 +1,7 @@
 use crate::cpu::Mem;
 use crate::rom::Rom;
 use crate::ppu::PPU;
+use crate::apu::APU;
 use crate::joypad::Joypad;
 
 pub struct Bus<'call> {
@@ -9,6 +10,7 @@ pub struct Bus<'call> {
   // TODO: Remove this
   // program_counter: [u8; 2],
   ppu: PPU,
+  apu: APU,
   joypad: Joypad,
   cycles: usize,
   gameloop_callback: Box<dyn FnMut(&PPU, &mut Joypad) + 'call>,
@@ -71,6 +73,15 @@ impl<'a> Mem for Bus<'a> {
 
       0x2002 => panic!("Attempted to write to PPU status register"),
 
+      0x4000 => self.apu.write_to_pulse_envelope(data),
+      0x4001 => self.apu.write_to_pulse_envelope(data),
+      0x4002 => self.apu.write_to_pulse_envelope(data),
+      0x4003 => self.apu.write_to_pulse_envelope(data),
+      0x4004 => self.apu.write_to_pulse_2_envelope(data),
+      0x4005 => self.apu.write_to_pulse_2_envelope(data),
+      0x4006 => self.apu.write_to_pulse_2_envelope(data),
+      0x4007 => self.apu.write_to_pulse_2_envelope(data),
+
       0x4014 => {
         let mut buf: [u8; 256] = [0; 256];
         for i in 0..=0xFF {
@@ -80,6 +91,8 @@ impl<'a> Mem for Bus<'a> {
 
         self.ppu.write_oam_dma(&buf);
       }
+
+      0x4015 => self.apu.write_to_status(data),
 
       0x4016 => self.joypad.write(data),
 
@@ -109,6 +122,7 @@ impl<'a> Bus<'a> {
       prg_rom: rom.prg_rom,
       // program_counter: [0x0, 0x86],
       ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
+      apu: APU::new(),
       joypad: Joypad::new(),
       cycles: 0,
       gameloop_callback: Box::from(gameloop_callback),

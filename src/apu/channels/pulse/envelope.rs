@@ -12,4 +12,8 @@ impl PulseEnvelope {
   pub fn new() -> Self {
     PulseEnvelope::from_bits_truncate(0)
   }
+
+  pub fn update(&mut self, data: u8) {
+    self.bits = data;
+  }
 }

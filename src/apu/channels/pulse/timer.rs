@@ -8,4 +8,8 @@ impl PulseTimer {
       timer_low: 0,
     }
   }
+
+  pub fn update(&mut self, data: u8) {
+    self.timer_low = data;
+  }
 }

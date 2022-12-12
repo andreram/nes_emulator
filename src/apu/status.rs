@@ -14,4 +14,8 @@ impl APUStatus {
   pub fn new() -> Self {
     APUStatus::from_bits_truncate(0)
   }
+
+  pub fn update(&mut self, data: u8) {
+    self.bits = data;
+  }
 }
