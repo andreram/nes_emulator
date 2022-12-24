@@ -17,7 +17,7 @@ pub struct PulseRegister {
 
 impl PulseRegister {
   pub fn new() -> Self {
-    PulseRegister { 
+    PulseRegister {
       envelope: PulseEnvelope::new(),
       length: PulseLength::new(),
       sweep: PulseSweep::new(),
@@ -43,5 +43,17 @@ impl PulseRegister {
 
   pub fn read_length_counter(&self) -> u8 {
     self.length.read_length()
+  }
+
+  pub fn silence_channel(&mut self) {
+    self.write_to_length(0)
+  }
+
+  pub fn get_output(&self) -> u8 {
+    if self.read_length_counter() == 0 {
+      0
+    } else {
+      self.envelope.get_envelope_volume()
+    }
   }
 }

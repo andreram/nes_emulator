@@ -1,22 +1,23 @@
-pub mod cpu;
-pub mod ops;
+pub mod apu;
 pub mod bus;
-pub mod rom;
-pub mod trace;
+pub mod cpu;
+pub mod joypad;
+pub mod ops;
 pub mod ppu;
 pub mod render;
-pub mod joypad;
-pub mod apu;
+pub mod rom;
+pub mod trace;
 
 use cpu::CPU;
+use joypad::Joypad;
+use joypad::JoypadButton;
+use ppu::PPU;
+use render::frame::Frame;
 use rom::Rom;
+use sdl2::audio::AudioSpecDesired;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
-use ppu::PPU;
-use render::frame::Frame;
-use joypad::Joypad;
-use joypad::JoypadButton;
 use std::collections::HashMap;
 
 #[macro_use]
@@ -25,21 +26,48 @@ extern crate lazy_static;
 #[macro_use]
 extern crate bitflags;
 
+const SAMPLE_COUNT: usize = 4410;
+
 fn main() {
   let scale_factor = 3.0;
 
   let sdl_context = sdl2::init().unwrap();
   let video_subsystem = sdl_context.video().unwrap();
+  let audio_subsystem = sdl_context.audio().unwrap();
   let window = video_subsystem
-    .window("Tile viewer", (Frame::WIDTH as f32 * scale_factor) as u32, (Frame::HEIGHT as f32 * scale_factor) as u32)
-    .position_centered().build().unwrap();
+    .window(
+      "Tile viewer",
+      (Frame::WIDTH as f32 * scale_factor) as u32,
+      (Frame::HEIGHT as f32 * scale_factor) as u32,
+    )
+    .position_centered()
+    .build()
+    .unwrap();
 
   let mut canvas = window.into_canvas().present_vsync().build().unwrap();
   let mut event_pump = sdl_context.event_pump().unwrap();
   canvas.set_scale(scale_factor, scale_factor).unwrap();
 
   let creator = canvas.texture_creator();
-  let mut texture = creator.create_texture_target(PixelFormatEnum::RGB24, Frame::WIDTH as u32, Frame::HEIGHT as u32).unwrap();
+  let mut texture = creator
+    .create_texture_target(
+      PixelFormatEnum::RGB24,
+      Frame::WIDTH as u32,
+      Frame::HEIGHT as u32,
+    )
+    .unwrap();
+
+  let desired_spec = AudioSpecDesired {
+    freq: Some(44100),
+    channels: Some(1),
+    samples: Some(SAMPLE_COUNT.try_into().unwrap()),
+  };
+
+  let queue = audio_subsystem
+    .open_queue::<i16, _>(None, &desired_spec)
+    .unwrap();
+
+  queue.resume();
 
   let raw_rom = std::fs::read("pacman.nes").unwrap();
   let rom = Rom::new(&raw_rom).unwrap();
@@ -74,14 +102,14 @@ fn main() {
           if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
             joypad.set_button_pressed(*key, true);
           }
-        },
+        }
 
         Event::KeyUp { keycode, .. } => {
           if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
             joypad.set_button_pressed(*key, false);
           }
-        },
-        _ => {},
+        }
+        _ => {}
       }
     }
   });

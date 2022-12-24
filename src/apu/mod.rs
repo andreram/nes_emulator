@@ -1,13 +1,16 @@
 pub mod channels;
+pub mod mixer;
 pub mod status;
 
 use channels::pulse::PulseRegister;
+use mixer::APUMixer;
 use status::APUStatus;
 
 pub struct APU {
   pulse: PulseRegister,
   pulse_2: PulseRegister,
   status: APUStatus,
+  mixer: APUMixer,
 }
 
 impl APU {
@@ -16,6 +19,7 @@ impl APU {
       pulse: PulseRegister::new(),
       pulse_2: PulseRegister::new(),
       status: APUStatus::new(),
+      mixer: APUMixer::new(),
     }
   }
 
@@ -53,7 +57,18 @@ impl APU {
   }
 
   pub fn write_to_status(&mut self, data: u8) {
-    self.status.update(data)
+    let silence_pulse_1 = data & 0b1 != 0;
+    let silence_pulse_2 = data & 0b10 != 0;
+
+    self.status.update(data);
+
+    if silence_pulse_1 {
+      self.pulse.silence_channel();
+    }
+
+    if silence_pulse_2 {
+      self.pulse_2.silence_channel();
+    }
   }
 
   pub fn read_status(&self) -> u8 {
@@ -68,5 +83,10 @@ impl APU {
     }
 
     status
+  }
+
+  pub fn update_mixer(&mut self) {
+    self.mixer.pulse_1_out = self.pulse.get_output();
+    self.mixer.pulse_2_out = self.pulse_2.get_output();
   }
 }

@@ -16,4 +16,8 @@ impl PulseEnvelope {
   pub fn update(&mut self, data: u8) {
     self.bits = data;
   }
+
+  pub fn get_envelope_volume(&self) -> u8 {
+    self.bits & PulseEnvelope::VOLUME.bits
+  }
 }
