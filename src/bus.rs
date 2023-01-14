@@ -1,8 +1,8 @@
-use crate::cpu::Mem;
-use crate::rom::Rom;
-use crate::ppu::PPU;
 use crate::apu::APU;
+use crate::cpu::Mem;
 use crate::joypad::Joypad;
+use crate::ppu::PPU;
+use crate::rom::Rom;
 
 pub struct Bus<'call> {
   cpu_vram: [u8; 2048],
@@ -13,7 +13,7 @@ pub struct Bus<'call> {
   apu: APU,
   joypad: Joypad,
   cycles: usize,
-  gameloop_callback: Box<dyn FnMut(&PPU, &mut Joypad) + 'call>,
+  gameloop_callback: Box<dyn FnMut(&PPU, &mut Joypad, &APU) + 'call>,
 }
 
 const RAM: u16 = 0x0000;
@@ -23,20 +23,20 @@ const PRG_ROM_MAP: u16 = 0x8000;
 const PRG_ROM_MAP_END: u16 = 0xFFFF;
 const RAM_MIRROR_MASK: u16 = 0b0000_0111_1111_1111; // 0x0 - 0x7FF
 const PPU_MIRROR_MASK: u16 = 0b0010_0000_0000_0111; // 0x2000 - 0x2007
-// const PROGRAM_COUNTER_LO: u16 = 0xFFFC;
-// const PROGRAM_COUNTER_HI: u16 = 0xFFFD;
+                                                    // const PROGRAM_COUNTER_LO: u16 = 0xFFFC;
+                                                    // const PROGRAM_COUNTER_HI: u16 = 0xFFFD;
 
 impl<'a> Mem for Bus<'a> {
   fn mem_read(&mut self, addr: u16) -> u8 {
     match addr {
-      RAM ..= RAM_MIRRORS_END => {
+      RAM..=RAM_MIRRORS_END => {
         let mirror_down_addr = addr & RAM_MIRROR_MASK;
         self.cpu_vram[mirror_down_addr as usize]
-      },
+      }
       0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 | 0x4014 => {
         // panic!("Attempted to read from write-only PPU address {:x}", addr);
         0
-      },
+      }
       0x2002 => self.ppu.read_status(),
       0x2004 => self.ppu.read_oam_data(),
       0x2007 => self.ppu.read_data(),
@@ -45,13 +45,13 @@ impl<'a> Mem for Bus<'a> {
 
       0x4016 => self.joypad.read(),
 
-      0x2008 ..= PPU_REGISTERS_MIRRORS_END => {
+      0x2008..=PPU_REGISTERS_MIRRORS_END => {
         let mirror_down_addr = addr & PPU_MIRROR_MASK;
         self.mem_read(mirror_down_addr)
-      },
+      }
       // PROGRAM_COUNTER_LO => self.program_counter[0],
       // PROGRAM_COUNTER_HI => self.program_counter[1],
-      PRG_ROM_MAP ..= PRG_ROM_MAP_END => self.read_prg_rom(addr),
+      PRG_ROM_MAP..=PRG_ROM_MAP_END => self.read_prg_rom(addr),
       _ => {
         // println!("Ignoring mem access at {:x}", addr);
         0
@@ -61,10 +61,10 @@ impl<'a> Mem for Bus<'a> {
 
   fn mem_write(&mut self, addr: u16, data: u8) {
     match addr {
-      RAM ..= RAM_MIRRORS_END => {
+      RAM..=RAM_MIRRORS_END => {
         let mirror_down_addr = addr & RAM_MIRROR_MASK;
         self.cpu_vram[mirror_down_addr as usize] = data;
-      },
+      }
       0x2000 => self.ppu.write_to_control(data),
       0x2001 => self.ppu.write_to_mask(data),
       0x2003 => self.ppu.write_to_oam_addr(data),
@@ -98,13 +98,13 @@ impl<'a> Mem for Bus<'a> {
 
       0x4016 => self.joypad.write(data),
 
-      0x2008 ..= PPU_REGISTERS_MIRRORS_END => {
+      0x2008..=PPU_REGISTERS_MIRRORS_END => {
         let mirror_down_addr = addr & PPU_MIRROR_MASK;
         self.mem_write(mirror_down_addr, data);
-      },
+      }
       // PROGRAM_COUNTER_LO => self.program_counter[0] = data,
       // PROGRAM_COUNTER_HI => self.program_counter[1] = data,
-      PRG_ROM_MAP ..= PRG_ROM_MAP_END => {
+      PRG_ROM_MAP..=PRG_ROM_MAP_END => {
         panic!("Attempted to write to cartridge ROM space");
       }
       _ => {
@@ -117,7 +117,7 @@ impl<'a> Mem for Bus<'a> {
 impl<'a> Bus<'a> {
   pub fn new<'call, F>(rom: Rom, gameloop_callback: F) -> Bus<'call>
   where
-    F: FnMut(&PPU, &mut Joypad) + 'call,
+    F: FnMut(&PPU, &mut Joypad, &APU) + 'call,
   {
     Bus {
       cpu_vram: [0; 2048],
@@ -150,7 +150,7 @@ impl<'a> Bus<'a> {
     let nmi_after = self.ppu.nmi_interrupt_ready();
 
     if !nmi_before && nmi_after {
-      (self.gameloop_callback)(&self.ppu, &mut self.joypad);
+      (self.gameloop_callback)(&self.ppu, &mut self.joypad, &self.apu);
     }
   }
 

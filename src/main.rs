@@ -8,6 +8,7 @@ pub mod render;
 pub mod rom;
 pub mod trace;
 
+use apu::APU;
 use cpu::CPU;
 use joypad::Joypad;
 use joypad::JoypadButton;
@@ -63,11 +64,11 @@ fn main() {
     samples: Some(SAMPLE_COUNT.try_into().unwrap()),
   };
 
-  let queue = audio_subsystem
+  let audio_queue = audio_subsystem
     .open_queue::<i16, _>(None, &desired_spec)
     .unwrap();
 
-  queue.resume();
+  audio_queue.resume();
 
   let raw_rom = std::fs::read("pacman.nes").unwrap();
   let rom = Rom::new(&raw_rom).unwrap();
@@ -84,11 +85,13 @@ fn main() {
   key_map.insert(Keycode::A, JoypadButton::BUTTON_A);
   key_map.insert(Keycode::S, JoypadButton::BUTTON_B);
 
-  let mut cpu = CPU::new_with_gameloop(rom, move |ppu: &PPU, joypad: &mut Joypad| {
+  let mut cpu = CPU::new_with_gameloop(rom, move |ppu: &PPU, joypad: &mut Joypad, apu: &APU| {
     render::render(ppu, &mut frame);
     texture.update(None, &frame.data, 256 * 3).unwrap();
     canvas.copy(&texture, None, None).unwrap();
     canvas.present();
+
+    // TODO: Queue audio sample from APU
 
     for event in event_pump.poll_iter() {
       match event {

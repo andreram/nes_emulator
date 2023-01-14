@@ -6,6 +6,8 @@ use channels::pulse::PulseRegister;
 use mixer::APUMixer;
 use status::APUStatus;
 
+use self::mixer::APUMixerOutputs;
+
 pub struct APU {
   pulse: PulseRegister,
   pulse_2: PulseRegister,
@@ -85,8 +87,15 @@ impl APU {
     status
   }
 
-  pub fn update_mixer(&mut self) {
-    self.mixer.pulse_1_out = self.pulse.get_output();
-    self.mixer.pulse_2_out = self.pulse_2.get_output();
+  pub fn get_audio_sample(&mut self) {
+    self.mixer.get_output(&APUMixerOutputs {
+      pulse_1: self.pulse.get_output(),
+      pulse_2: self.pulse_2.get_output(),
+      triangle: 0,
+      noise: 0,
+      dmc: 0,
+    });
+
+    // TODO: Add first-order filters to sample
   }
 }
