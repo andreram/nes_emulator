@@ -20,4 +20,8 @@ impl PulseEnvelope {
   pub fn get_envelope_volume(&self) -> u8 {
     self.bits & PulseEnvelope::VOLUME.bits
   }
+
+  pub fn get_duty_cycle(&self) -> u8 {
+    (self.bits & (PulseEnvelope::DUTY_1 | PulseEnvelope::DUTY_2).bits) >> 6
+  }
 }

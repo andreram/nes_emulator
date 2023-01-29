@@ -17,4 +17,8 @@ impl PulseLength {
   pub fn read_length(&self) -> u8 {
     (self.bits & PulseLength::LENGTH_COUNTER_LOAD.bits) >> 3
   }
+
+  pub fn read_timer_high(&self) -> u16 {
+    ((self.bits & PulseLength::TIMER_HIGH.bits) as u16) << 8
+  }
 }
