@@ -23,8 +23,8 @@ impl PulseSequencer {
     self.divider
   }
 
-  pub fn get_sequence_step(&self) -> u16 {
-    self.divider
+  pub fn get_sequence_step(&self) -> u8 {
+    self.step
   }
 
   pub fn decrement_divider(&mut self) {

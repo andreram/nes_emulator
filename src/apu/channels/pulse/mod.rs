@@ -16,6 +16,8 @@ pub struct PulseRegister {
   sweep: PulseSweep,
   timer: PulseTimer,
   sequencer: PulseSequencer,
+  target_period: u16,
+  sweep_reset: bool,
 }
 
 const DUTY_CYCLE_TABLE: [[u8; 8]; 4] = [
@@ -33,6 +35,8 @@ impl PulseRegister {
       sweep: PulseSweep::new(),
       timer: PulseTimer::new(),
       sequencer: PulseSequencer::new(),
+      target_period: 0,
+      sweep_reset: false,
     }
   }
 

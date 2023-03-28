@@ -12,25 +12,38 @@ const PALETTE_GAP_BYTES: u8 = 4;
 
 // https://www.nesdev.org/wiki/PPU_palettes
 fn bg_palette(ppu: &PPU, tile_row: usize, tile_column: usize) -> [u8; 4] {
-  let attr_table_idx = tile_row / META_TILE_WIDTH_TILES * BG_SCREEN_WIDTH_META_TILES + tile_column / META_TILE_WIDTH_TILES;
+  let attr_table_idx = tile_row / META_TILE_WIDTH_TILES * BG_SCREEN_WIDTH_META_TILES
+    + tile_column / META_TILE_WIDTH_TILES;
   // using first nametable for now
   let attr_byte = ppu.vram[0x3c0 + attr_table_idx];
 
-  let palette_idx = match (tile_row % META_TILE_WIDTH_TILES / 2, tile_column % META_TILE_WIDTH_TILES / 2) {
-    (0,0) => attr_byte & 0b11,
-    (0,1) => (attr_byte >> 2) & 0b11,
-    (1,0) => (attr_byte >> 4) & 0b11,
-    (1,1) => (attr_byte >> 6) & 0b11,
-    (_,_) => panic!("should be unreachable"),
+  let palette_idx = match (
+    tile_row % META_TILE_WIDTH_TILES / 2,
+    tile_column % META_TILE_WIDTH_TILES / 2,
+  ) {
+    (0, 0) => attr_byte & 0b11,
+    (0, 1) => (attr_byte >> 2) & 0b11,
+    (1, 0) => (attr_byte >> 4) & 0b11,
+    (1, 1) => (attr_byte >> 6) & 0b11,
+    (_, _) => panic!("should be unreachable"),
   };
 
   let palette_start = 1 + (palette_idx * PALETTE_GAP_BYTES) as usize;
-  [ppu.palette_table[0], ppu.palette_table[palette_start], ppu.palette_table[palette_start + 1], ppu.palette_table[palette_start + 2]]
+  [
+    ppu.palette_table[0],
+    ppu.palette_table[palette_start],
+    ppu.palette_table[palette_start + 1],
+    ppu.palette_table[palette_start + 2],
+  ]
 }
 
 fn sprite_palette(ppu: &PPU, palette_idx: u8) -> [u8; 3] {
   let palette_start = 0x11 + (palette_idx * PALETTE_GAP_BYTES) as usize;
-  [ppu.palette_table[palette_start], ppu.palette_table[palette_start + 1], ppu.palette_table[palette_start + 2]]
+  [
+    ppu.palette_table[palette_start],
+    ppu.palette_table[palette_start + 1],
+    ppu.palette_table[palette_start + 2],
+  ]
 }
 
 pub fn render(ppu: &PPU, frame: &mut Frame) {
@@ -42,7 +55,8 @@ pub fn render(ppu: &PPU, frame: &mut Frame) {
     let tile_col = i % BG_SCREEN_WIDTH_TILES;
     let tile_row = i / BG_SCREEN_WIDTH_TILES;
 
-    let tile = &ppu.chr_rom[(bank + tile_idx * TILE_SIZE_BYTES) as usize..=(bank + tile_idx * TILE_SIZE_BYTES + 15) as usize];
+    let tile = &ppu.chr_rom[(bank + tile_idx * TILE_SIZE_BYTES) as usize
+      ..=(bank + tile_idx * TILE_SIZE_BYTES + 15) as usize];
     let palette = bg_palette(ppu, tile_row, tile_col);
 
     for y in 0..=7 {
@@ -80,7 +94,8 @@ pub fn render(ppu: &PPU, frame: &mut Frame) {
 
     let bank = ppu.control.sprite_pattern_table_addr();
 
-    let tile = &ppu.chr_rom[(bank + tile_idx * TILE_SIZE_BYTES) as usize..=(bank + tile_idx * TILE_SIZE_BYTES + 15) as usize];
+    let tile = &ppu.chr_rom[(bank + tile_idx * TILE_SIZE_BYTES) as usize
+      ..=(bank + tile_idx * TILE_SIZE_BYTES + 15) as usize];
 
     for y in 0..=7 {
       let mut hi = tile[y];

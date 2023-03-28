@@ -1,6 +1,7 @@
 pub mod channels;
 pub mod mixer;
 pub mod status;
+pub mod divider;
 
 use channels::pulse::PulseRegister;
 use mixer::APUMixer;

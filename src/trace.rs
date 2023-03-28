@@ -1,6 +1,6 @@
-use crate::cpu::CPU;
-use crate::cpu::Mem;
 use crate::cpu::AddressingMode;
+use crate::cpu::Mem;
+use crate::cpu::CPU;
 use crate::ops::OPS_MAP;
 
 pub fn trace(cpu: &mut CPU) -> String {
@@ -39,34 +39,40 @@ pub fn trace(cpu: &mut CPU) -> String {
   let args_assembly = match op.mode {
     AddressingMode::Immediate => {
       format!(" #${}", args[1])
-    },
+    }
     AddressingMode::ZeroPage => {
       format!(" ${:02X} = {:02X}", addr, value)
-    },
+    }
     AddressingMode::ZeroPage_X => {
       format!(" ${},X @ {:02X} = {:02X}", args[1], addr, value)
-    },
+    }
     AddressingMode::ZeroPage_Y => {
       format!(" ${},Y @ {:02X} = {:02X}", args[1], addr, value)
-    },
+    }
     AddressingMode::Indirect_X => {
       let init_addr = cpu.mem_read(cpu.program_counter + 1);
       let wrap = init_addr.wrapping_add(cpu.register_x);
-      format!(" (${:02X},X) @ {:02X} = {:04X} = {:02X}", init_addr, wrap, addr, value)
-    },
+      format!(
+        " (${:02X},X) @ {:02X} = {:04X} = {:02X}",
+        init_addr, wrap, addr, value
+      )
+    }
     AddressingMode::Indirect_Y => {
       let wrap = addr.wrapping_sub(cpu.register_y as u16);
-      format!(" (${}),Y = {:04X} @ {:04X} = {:02X}", args[1], wrap, addr, value)
-    },
+      format!(
+        " (${}),Y = {:04X} @ {:04X} = {:02X}",
+        args[1], wrap, addr, value
+      )
+    }
     AddressingMode::Absolute => {
       format!(" ${:04X} = {:02X}", addr, value)
-    },
+    }
     AddressingMode::Absolute_X => {
       format!(" ${:04X},X @ {:04X} = {:02X}", init_addr, addr, value)
-    },
+    }
     AddressingMode::Absolute_Y => {
       format!(" ${:04X},Y @ {:04X} = {:02X}", init_addr, addr, value)
-    },
+    }
     AddressingMode::NoneAddressing => {
       match op.len {
         1 => {
@@ -74,15 +80,16 @@ pub fn trace(cpu: &mut CPU) -> String {
             "ASL" | "ROL" | "LSR" | "ROR" => {
               // accumulator addressing modes
               String::from(" A")
-            },
+            }
             _ => String::from(""),
           }
         }
         2 => {
           let offset = cpu.mem_read(cpu.program_counter + 1) as i8;
-          let addr = cpu.program_counter
-          .wrapping_add(2)
-          .wrapping_add(offset as u16);
+          let addr = cpu
+            .program_counter
+            .wrapping_add(2)
+            .wrapping_add(offset as u16);
           format!(" ${:04X}", addr)
         }
         3 => {
@@ -98,7 +105,7 @@ pub fn trace(cpu: &mut CPU) -> String {
                 cpu.mem_read_u16(addr)
               };
               format!(" (${:04X}) = {:04X}", addr, indirect_addr)
-            }, 
+            }
             _ => format!(" ${}{}", args[2], args[1]),
           }
         }
@@ -111,22 +118,17 @@ pub fn trace(cpu: &mut CPU) -> String {
 
   log.push_str(&format!(
     "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}",
-    cpu.register_a,
-    cpu.register_x,
-    cpu.register_y,
-    cpu.status,
-    cpu.stack_pointer,
+    cpu.register_a, cpu.register_x, cpu.register_y, cpu.status, cpu.stack_pointer,
   ));
 
   log
 }
 
-
 #[cfg(test)]
 mod test {
   use super::*;
-  use crate::cpu::CPU;
   use crate::cpu::Mem;
+  use crate::cpu::CPU;
   use crate::rom::test::test_rom;
 
   #[test]
@@ -144,7 +146,7 @@ mod test {
     cpu.register_a = 1;
     cpu.register_x = 2;
     cpu.register_y = 3;
-    
+
     let mut result: Vec<String> = vec![];
     cpu.run_with_callback(|cpu| {
       result.push(trace(cpu));

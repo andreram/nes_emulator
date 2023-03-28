@@ -108,7 +108,22 @@ pub mod test {
   fn test_with_trainer() {
     let test_rom = create_rom(TestRom {
       header: vec![
-        0x4E, 0x45, 0x53, 0x1A, 0x02, 0x01, 0x31 | 0b100, 00, 00, 00, 00, 00, 00, 00, 00, 00,
+        0x4E,
+        0x45,
+        0x53,
+        0x1A,
+        0x02,
+        0x01,
+        0x31 | 0b100,
+        00,
+        00,
+        00,
+        00,
+        00,
+        00,
+        00,
+        00,
+        00,
       ],
       trainer: Some(vec![0; 512]),
       prg_rom: vec![1; 2 * PRG_ROM_PAGE_SIZE],

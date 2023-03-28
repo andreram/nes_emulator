@@ -18,6 +18,6 @@ impl Frame {
       self.data[base] = rgb.0;
       self.data[base + 1] = rgb.1;
       self.data[base + 2] = rgb.2;
-    } 
+    }
   }
 }
