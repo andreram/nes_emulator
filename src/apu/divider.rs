@@ -9,7 +9,7 @@ impl Divider {
   }
   
   pub fn clock(&mut self) {
-    if (self.counter == 0) {
+    if self.counter == 0 {
       self.counter = self.period_reload_val;
     } else {
       self.counter -= 1;
